@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleet Driver Dashboard | NSCNS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@500;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      background: #02080c;
+    }
+    .bg-shape-driver {
+      position: fixed;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      filter: blur(80px);
+      background: rgba(128, 237, 153, 0.15);
+      top: -50px;
+      left: -50px;
+      z-index: -1;
+      animation: pulse-dot 4s infinite alternate;
+    }
+    .driver-app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .driver-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .driver-profile img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+    }
+    .driver-status {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .big-score {
+      font-size: 5rem;
+      font-family: "Sora", sans-serif;
+      margin: 0.5rem 0;
+      background: linear-gradient(120deg, var(--ok), #38b000);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .route-card {
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .route-timeline {
+      position: relative;
+      padding-left: 20px;
+      border-left: 2px dashed rgba(255,255,255,0.2);
+    }
+    .timeline-step {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .timeline-step::before {
+      content: "";
+      position: absolute;
+      left: -26px;
+      top: 4px;
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent);
+    }
+    .action-grid {
+      display: grid;
+      gap: 1rem;
+      margin-top: auto;
+      padding-top: 2rem;
+    }
+    .btn-driver {
+      font-size: 1.1rem;
+      padding: 1rem;
+    }
+    .btn-alert {
+      background: linear-gradient(120deg, #ff6b6b, #c92a2a);
+      color: #fff;
+    }
+    #rerouteAlert {
+      display: none;
+      background: rgba(255, 209, 102, 0.15);
+      border: 1px solid var(--warn);
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      animation: popIn 0.3s ease;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-shape-driver"></div>
+  
+  <div class="driver-app">
+    <header class="driver-header">
+      <div>
+        <h2 style="font-size: 1.2rem;">Fleet Unit #710</h2>
+        <p class="muted" style="color: var(--muted); font-size: 0.9rem;">Central Corridor</p>
+      </div>
+      <a href="index.html" class="btn btn-small btn-ghost">Logout</a>
+    </header>
+
+    <div class="driver-status">
+      <p class="eyebrow">Current Route Chaos Score</p>
+      <h1 class="big-score" id="driverScore">24</h1>
+      <p style="color: var(--ok); font-weight: 700;" id="driverState">Stable & Green</p>
+    </div>
+
+    <div id="rerouteAlert">
+      <h3 style="color: var(--warn); margin-bottom: 0.5rem;">⚠️ Chaos Spike Detected!</h3>
+      <p style="font-size: 0.9rem; margin-bottom: 1rem;">Congestion + Weather pressure ahead. AI recommends alternative route.</p>
+      <button class="btn btn-small" id="acceptRouteBtn">Accept Reroute</button>
+    </div>
+
+    <div class="route-card">
+      <h3 style="margin-bottom: 1rem;">Active Manifest: Medical Supp.</h3>
+      <div class="route-timeline">
+        <div class="timeline-step">
+          <strong>Origin: North Hub</strong>
+          <p style="color:var(--muted); font-size:0.85rem;">Departed 08:00 AM</p>
+        </div>
+        <div class="timeline-step">
+          <strong>Checkpoint: Highway 9</strong>
+          <p style="color:var(--muted); font-size:0.85rem;">ETA 10:15 AM</p>
+        </div>
+        <div class="timeline-step" style="margin-bottom: 0;">
+          <strong>Dest: City Hospital</strong>
+          <p style="color:var(--muted); font-size:0.85rem;">ETA 11:30 AM</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-grid">
+      <button class="btn btn-driver" id="confirmDeliveryBtn">Confirm Delivery</button>
+      <button class="btn btn-driver btn-alert" id="reportCongestionBtn">Report Local Congestion</button>
+    </div>
+  </div>
+
+  <script>
+    // Mock Driver Intelligence
+    const driverScore = document.getElementById('driverScore');
+    const driverState = document.getElementById('driverState');
+    const rerouteAlert = document.getElementById('rerouteAlert');
+    const reportCongestionBtn = document.getElementById('reportCongestionBtn');
+    const acceptRouteBtn = document.getElementById('acceptRouteBtn');
+    
+    let score = 24;
+
+    reportCongestionBtn.addEventListener('click', () => {
+      // Simulate real-time chaos reporting
+      score = 78;
+      driverScore.textContent = score;
+      driverScore.style.background = 'linear-gradient(120deg, #ff6b6b, #c92a2a)';
+      driverScore.style.webkitBackgroundClip = 'text';
+      driverState.textContent = 'High Alert';
+      driverState.style.color = 'var(--risk)';
+      reportCongestionBtn.disabled = true;
+      reportCongestionBtn.textContent = 'Reported';
+      
+      // Auto trigger reroute warning
+      setTimeout(() => {
+        rerouteAlert.style.display = 'block';
+      }, 800);
+    });
+
+    acceptRouteBtn.addEventListener('click', () => {
+      rerouteAlert.innerHTML = '<p style="color: var(--ok)">Route updated! Rerouting to safe lane...</p>';
+      setTimeout(() => {
+        rerouteAlert.style.display = 'none';
+        score = 35; // score goes down
+        driverScore.textContent = score;
+        driverScore.style.background = 'linear-gradient(120deg, var(--ok), #38b000)';
+        driverScore.style.webkitBackgroundClip = 'text';
+        driverState.textContent = 'Stable';
+        driverState.style.color = 'var(--ok)';
+        reportCongestionBtn.disabled = false;
+        reportCongestionBtn.textContent = 'Report Local Congestion';
+      }, 1500);
+    });
+  </script>
+</body>
+</html>

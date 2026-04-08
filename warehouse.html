@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warehouse Command | NSCNS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@500;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .wh-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+      background: var(--bg);
+    }
+    .wh-sidebar {
+      background: rgba(0,0,0,0.4);
+      border-right: 1px solid rgba(255,255,255,0.1);
+      padding: 1.5rem;
+    }
+    .wh-main {
+      padding: 2rem 3rem;
+      overflow-y: auto;
+    }
+    .wh-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 3rem;
+    }
+    .wh-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .stat-val {
+      font-size: 2.5rem;
+      font-family: 'Sora';
+      font-weight: 700;
+      margin: 0.5rem 0;
+    }
+    .ai-panel {
+      background: linear-gradient(145deg, rgba(255, 209, 102, 0.1), rgba(0,0,0,0));
+      border: 1px solid rgba(255, 209, 102, 0.3);
+      padding: 2rem;
+      border-radius: var(--radius);
+    }
+    .wh-nav a {
+      display: block;
+      padding: 0.8rem 1rem;
+      color: var(--muted);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      transition: background 0.2s;
+    }
+    .wh-nav a.active, .wh-nav a:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--text);
+    }
+    .approve-btn {
+      margin-top: 1rem;
+    }
+    .progress-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 1rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 76%;
+    }
+  </style>
+</head>
+<body>
+  <div class="wh-layout">
+    <aside class="wh-sidebar">
+      <div class="brand" style="margin-bottom: 3rem;">
+        <span class="brand-dot"></span>
+        NSCNS | HQ
+      </div>
+      <nav class="wh-nav">
+        <a href="#" class="active">Overview</a>
+        <a href="#">Inventory</a>
+        <a href="#">Fleet Nodes</a>
+        <a href="#">Crisis Simulation</a>
+        <a href="#">Audit Logs</a>
+      </nav>
+      <div style="position: absolute; bottom: 2rem;">
+        <a href="index.html" class="btn btn-small btn-ghost">Sign Out</a>
+      </div>
+    </aside>
+
+    <main class="wh-main">
+      <header class="wh-header">
+        <div>
+          <h1 style="font-size: 2rem;">Manager Command</h1>
+          <p class="muted">Central Corridor Warehouse Node</p>
+        </div>
+        <div class="status-chip" style="margin: 0;">
+          <span class="status-label">Network Sync</span>
+          <strong style="color:var(--ok); font-size: 1.2rem;">Connected</strong>
+        </div>
+      </header>
+
+      <div class="wh-grid">
+        <div class="stat-card">
+          <p class="eyebrow">Medical Supply Level</p>
+          <p class="stat-val">76%</p>
+          <p style="color:var(--ok); font-size: 0.9rem;">Adequate buffer</p>
+          <div class="progress-bar"><div class="progress-fill"></div></div>
+        </div>
+        <div class="stat-card">
+          <p class="eyebrow">Food & Rations</p>
+          <p class="stat-val" style="color: var(--warn)">42%</p>
+          <p style="color:var(--warn); font-size: 0.9rem;">Nearing deficit</p>
+          <div class="progress-bar"><div class="progress-fill" style="width: 42%; background: var(--warn)"></div></div>
+        </div>
+        <div class="stat-card">
+          <p class="eyebrow">Active Deliveries</p>
+          <p class="stat-val">124</p>
+          <p style="color:var(--muted); font-size: 0.9rem;">Fleet running smoothly</p>
+          <div class="progress-bar"><div class="progress-fill" style="width: 90%; background: var(--ok)"></div></div>
+        </div>
+      </div>
+
+      <div class="ai-panel">
+        <h2 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span class="brand-dot" style="animation: none;"></span> 
+          AI Dynamic Allocation Plan
+        </h2>
+        <p style="color: var(--muted); margin-bottom: 1.5rem; max-width: 60ch;">
+          Predictive model forecasts a <strong>food supply deficit</strong> in the Central Corridor within 48 hours due to incoming storm pressure. We recommend emergency transfer from the South Arc.
+        </p>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.8rem;">Proposed Order</h3>
+          <ul style="list-style: none; padding: 0; color: var(--muted); line-height: 1.8;">
+            <li><strong style="color: #fff">Source:</strong> South Arc (Surplus Zone)</li>
+            <li><strong style="color: #fff">Amount:</strong> 18,000 units (Food & Rations)</li>
+            <li><strong style="color: #fff">Transport:</strong> Rerouting 4 Idle Fleet Nodes</li>
+          </ul>
+        </div>
+        
+        <button class="btn approve-btn" id="approveTransferBtn">Approve Transfer</button>
+        <span id="transferFeedback" style="margin-left: 1rem; color: var(--ok); display: none; font-weight: bold;">Transfer Approved. Fleet is executing.</span>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const approveTransferBtn = document.getElementById('approveTransferBtn');
+    const transferFeedback = document.getElementById('transferFeedback');
+    
+    approveTransferBtn.addEventListener('click', () => {
+      approveTransferBtn.disabled = true;
+      approveTransferBtn.textContent = 'Processing...';
+      
+      setTimeout(() => {
+        approveTransferBtn.style.display = 'none';
+        transferFeedback.style.display = 'inline';
+        
+        // Slightly update the food bar to show it going up!
+        const foodFill = document.querySelectorAll('.progress-fill')[1];
+        const foodStat = document.querySelectorAll('.stat-val')[1];
+        const foodDesc = document.querySelectorAll('.stat-card p:nth-of-type(3)')[1];
+        
+        foodFill.style.width = '85%';
+        foodFill.style.background = 'var(--ok)';
+        foodFill.style.transition = 'all 1.5s ease-in-out';
+        
+        foodStat.textContent = '85%';
+        foodStat.style.color = 'var(--ok)';
+        foodDesc.textContent = 'Transfer Incoming';
+        foodDesc.style.color = 'var(--ok)';
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
