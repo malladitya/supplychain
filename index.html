@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NSCNS | National Supply Chain Nervous System</title>
+  <meta
+    name="description"
+    content="National Supply Chain Nervous System (NSCNS): an AI-powered platform for real-time logistics intelligence, crisis prediction, and adaptive national coordination."
+  />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@500;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-shape bg-shape-1" aria-hidden="true"></div>
+  <div class="bg-shape bg-shape-2" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="#home" class="brand">
+        <span class="brand-dot"></span>
+        NSCNS
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#problem">Problem</a>
+        <a href="#features">Features</a>
+        <a href="#control-center">Control Center</a>
+        <a href="#impact">Impact</a>
+        <a href="#roadmap">Roadmap</a>
+      </nav>
+      <div class="header-actions" style="display: flex; gap: 0.8rem;">
+        <a class="btn btn-small btn-ghost" href="#contact">Discuss</a>
+        <button class="btn btn-small" id="openLoginBtn">Login <span aria-hidden="true">&rarr;</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="home" class="hero section">
+      <div class="container hero-grid">
+        <div class="hero-copy reveal">
+          <p class="eyebrow">National Logistics Intelligence Platform</p>
+          <h1>National Supply Chain Nervous System</h1>
+          <p class="hero-lead">
+            A unified AI-powered framework that senses disruptions, predicts shortages,
+            and coordinates real-time response across the nation.
+          </p>
+          <div class="hero-actions">
+            <a class="btn" href="#features">Explore Features</a>
+            <a class="btn btn-ghost" href="#roadmap">View Rollout Plan</a>
+          </div>
+          <ul class="hero-metrics">
+            <li>
+              <span class="metric-value">13</span>
+              <span class="metric-label">Core Modules</span>
+            </li>
+            <li>
+              <span class="metric-value">24m</span>
+              <span class="metric-label">Scale Timeline</span>
+            </li>
+            <li>
+              <span class="metric-value">24/7</span>
+              <span class="metric-label">Operational Visibility</span>
+            </li>
+          </ul>
+        </div>
+
+        <aside class="hero-panel reveal">
+          <h2>Live Chaos Score Prototype</h2>
+          <p>Simulated regional stress index combining weather, traffic, and supply-demand pressure.</p>
+          <div class="score-panel">
+            <p class="score-label">Current Regional Chaos Score</p>
+            <p class="score-value" id="heroChaosScore">62</p>
+            <p class="score-state" id="heroChaosState">High Alert</p>
+            <label for="stressRange">Adjust stress scenario</label>
+            <input type="range" id="stressRange" min="0" max="100" value="62" />
+            <div class="range-legend">
+              <span>Stable</span>
+              <span>Disrupted</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="problem" class="section">
+      <div class="container">
+        <p class="eyebrow reveal">Why NSCNS</p>
+        <h2 class="section-title reveal">Current national supply chains are reactive and fragmented</h2>
+        <div class="problem-grid">
+          <article class="card reveal">
+            <h3>Data Silos</h3>
+            <p>Departments and stakeholders operate in isolation, limiting unified action.</p>
+          </article>
+          <article class="card reveal">
+            <h3>Slow Decisions</h3>
+            <p>Manual workflows delay response to shortages, congestion, and route failures.</p>
+          </article>
+          <article class="card reveal">
+            <h3>Low Predictability</h3>
+            <p>Disruptions are addressed after impact instead of being prevented in advance.</p>
+          </article>
+          <article class="card reveal">
+            <h3>Emergency Gaps</h3>
+            <p>Disaster response often lacks synchronized logistics for critical goods delivery.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section section-alt">
+      <div class="container">
+        <p class="eyebrow reveal">Core Intelligence Stack</p>
+        <h2 class="section-title reveal">13 capabilities for a self-adaptive national logistics network</h2>
+        <div class="feature-grid">
+          <article class="feature-card reveal"><h3>1. Chaos Score Engine</h3><p>Continuous risk scoring for every region.</p></article>
+          <article class="feature-card reveal"><h3>2. Self-Healing Operations</h3><p>Auto-rerouting and dynamic priority updates.</p></article>
+          <article class="feature-card reveal"><h3>3. Crisis Prediction</h3><p>Forecast shortages of food, medicine, and fuel.</p></article>
+          <article class="feature-card reveal"><h3>4. Dynamic Allocation</h3><p>Rebalance supply between surplus and deficit zones.</p></article>
+          <article class="feature-card reveal"><h3>5. Multi-Node AI</h3><p>Local decisions with national coordination.</p></article>
+          <article class="feature-card reveal"><h3>6. Emergency Mode</h3><p>Disaster-specific logistics prioritization.</p></article>
+          <article class="feature-card reveal"><h3>7. Policy Simulator</h3><p>Test policy outcomes before implementation.</p></article>
+          <article class="feature-card reveal"><h3>8. Event Awareness</h3><p>Adjust plans for festivals, elections, and spikes.</p></article>
+          <article class="feature-card reveal"><h3>9. Memory Learning</h3><p>Learn from past disruptions to avoid repeat failures.</p></article>
+          <article class="feature-card reveal"><h3>10. Explainable AI</h3><p>Transparent recommendations with clear reasoning.</p></article>
+          <article class="feature-card reveal"><h3>11. Public-Private Integration</h3><p>Unified intelligence across sectors.</p></article>
+          <article class="feature-card reveal"><h3>12. Offline-Aware Operations</h3><p>Reliable workflows in low-connectivity regions.</p></article>
+          <article class="feature-card reveal"><h3>13. Live Visualization</h3><p>Heatmaps of supply-demand dynamics in real time.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="control-center" class="section control-section">
+      <div class="container">
+        <p class="eyebrow reveal">Operational Prototype</p>
+        <h2 class="section-title reveal">Run scenarios, reroute supply, and inspect the AI rationale</h2>
+        <div class="control-shell">
+          <div class="control-panel reveal">
+            <div class="panel-head">
+              <h3>Scenario Builder</h3>
+              <p>Adjust the operating context to simulate stress, response, and recovery.</p>
+            </div>
+            <div class="control-stack">
+              <div class="field-group">
+                <label for="regionSelect">Primary region</label>
+                <select id="regionSelect">
+                  <option value="north">North Hub</option>
+                  <option value="central" selected>Central Corridor</option>
+                  <option value="south">South Arc</option>
+                  <option value="coastal">Coastal Belt</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="eventSelect">Event awareness</label>
+                <select id="eventSelect">
+                  <option value="normal" selected>Normal operations</option>
+                  <option value="festival">Festival surge</option>
+                  <option value="election">Election logistics</option>
+                  <option value="storm">Severe storm</option>
+                  <option value="disaster">Disaster response</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="weatherRange">Weather pressure</label>
+                <input type="range" id="weatherRange" min="0" max="100" value="38" />
+              </div>
+              <div class="field-group">
+                <label for="trafficRange">Traffic congestion</label>
+                <input type="range" id="trafficRange" min="0" max="100" value="52" />
+              </div>
+              <div class="field-group">
+                <label for="demandRange">Demand pressure</label>
+                <input type="range" id="demandRange" min="0" max="100" value="64" />
+              </div>
+              <div class="field-group">
+                <label for="integrationRange">Public-private integration</label>
+                <input type="range" id="integrationRange" min="0" max="100" value="76" />
+              </div>
+              <div class="field-group">
+                <label for="policySelect">Policy simulator</label>
+                <select id="policySelect">
+                  <option value="balanced" selected>Balanced response</option>
+                  <option value="resilience">Resilience first</option>
+                  <option value="cost">Cost control</option>
+                  <option value="equity">Equity allocation</option>
+                </select>
+              </div>
+              <div class="toggle-row">
+                <label class="toggle-pill">
+                  <input type="checkbox" id="emergencyToggle" />
+                  <span>Emergency mode</span>
+                </label>
+                <label class="toggle-pill">
+                  <input type="checkbox" id="offlineToggle" />
+                  <span>Offline-aware fallback</span>
+                </label>
+              </div>
+              <div class="action-row">
+                <button class="btn" id="runScenarioBtn" type="button">Run scenario</button>
+                <button class="btn btn-ghost" id="healScenarioBtn" type="button">Auto-reroute</button>
+                <button class="btn btn-ghost" id="saveLessonBtn" type="button">Save lesson</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="command-output reveal">
+            <div class="status-strip">
+              <div class="status-chip">
+                <span class="status-label">Chaos Score</span>
+                <strong id="chaosScore">62</strong>
+                <small id="chaosState">High Alert</small>
+              </div>
+              <div class="status-chip">
+                <span class="status-label">Predicted Shortage</span>
+                <strong id="forecastValue">Moderate</strong>
+                <small id="forecastDetail">Food, medical, and fuel buffers under watch</small>
+              </div>
+              <div class="status-chip">
+                <span class="status-label">Response Mode</span>
+                <strong id="responseMode">Standard</strong>
+                <small id="responseDetail">Balanced routing and manual oversight</small>
+              </div>
+            </div>
+
+            <div class="dashboard-grid">
+              <article class="dashboard-card dashboard-span-2">
+                <div class="card-heading">
+                  <h3>Live visualization</h3>
+                  <p>Regional state heatmap generated from the current scenario.</p>
+                </div>
+                <div id="liveMap" class="live-map" aria-label="Regional heatmap"></div>
+              </article>
+
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>Explainable AI</h3>
+                  <p>Factors driving the current recommendation.</p>
+                </div>
+                <ul id="explainList" class="detail-list"></ul>
+              </article>
+
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>Dynamic allocation</h3>
+                  <p>Recommended redistribution between regions.</p>
+                </div>
+                <ul id="allocationList" class="detail-list"></ul>
+              </article>
+
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>Crisis prediction</h3>
+                  <p>Shortage outlook for essential categories.</p>
+                </div>
+                <ul id="forecastList" class="detail-list"></ul>
+              </article>
+
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>Multi-node AI</h3>
+                  <p>Local decision nodes with national coordination.</p>
+                </div>
+                <div id="regionGrid" class="region-grid"></div>
+              </article>
+
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>Policy simulator</h3>
+                  <p id="policyCompare">Balanced policy maintains resilience without overcorrecting cost.</p>
+                </div>
+                <ul id="policyList" class="detail-list"></ul>
+              </article>
+
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>Public-private integration</h3>
+                  <p>Network status across government and commercial nodes.</p>
+                </div>
+                <ul id="integrationList" class="detail-list"></ul>
+              </article>
+
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>Memory learning</h3>
+                  <p>What the system remembers from prior runs.</p>
+                </div>
+                <ul id="historyList" class="detail-list"></ul>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="impact" class="section">
+      <div class="container impact-grid">
+        <div class="impact-copy reveal">
+          <p class="eyebrow">Expected Outcomes</p>
+          <h2 class="section-title">Efficiency, resilience, and transparent governance</h2>
+          <ul class="impact-list">
+            <li>Reduced delivery delays for essential goods</li>
+            <li>Lower operational costs and reduced wastage</li>
+            <li>Improved disaster and crisis response speed</li>
+            <li>Better infrastructure and resource utilization</li>
+            <li>Data-driven national decision-making</li>
+          </ul>
+        </div>
+        <div class="impact-visual reveal" role="img" aria-label="Illustrative supply and demand heatmap">
+          <div class="heat-cell hot">Deficit</div>
+          <div class="heat-cell warm">Stress</div>
+          <div class="heat-cell balanced">Balanced</div>
+          <div class="heat-cell surplus">Surplus</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap" class="section section-alt">
+      <div class="container">
+        <p class="eyebrow reveal">Implementation Plan</p>
+        <h2 class="section-title reveal">Phased rollout from pilot to national scale</h2>
+        <div class="timeline">
+          <article class="timeline-item reveal">
+            <p class="phase">Phase 1 · 0-6 months</p>
+            <h3>Foundation</h3>
+            <p>Data onboarding, governance standards, pilot dashboards in selected regions.</p>
+          </article>
+          <article class="timeline-item reveal">
+            <p class="phase">Phase 2 · 6-12 months</p>
+            <h3>Intelligence</h3>
+            <p>Chaos scoring, predictive shortages, simulation models, explainable recommendations.</p>
+          </article>
+          <article class="timeline-item reveal">
+            <p class="phase">Phase 3 · 12-24 months</p>
+            <h3>Autonomy</h3>
+            <p>Self-healing automation, emergency orchestration, regional AI decision nodes.</p>
+          </article>
+          <article class="timeline-item reveal">
+            <p class="phase">Phase 4 · 24+ months</p>
+            <h3>Scale</h3>
+            <p>Nationwide deployment, IoT integration, sustainability and global interoperability.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="section cta-section">
+      <div class="container cta-box reveal">
+        <h2>Ready to shape the future of national logistics?</h2>
+        <p>
+          NSCNS can become a strategic foundation for resilient public service delivery,
+          crisis readiness, and transparent data-driven governance.
+        </p>
+        <a class="btn" href="mailto:contact@nscns.example">Start the Discussion</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Login Modal -->
+  <div class="modal-overlay" id="loginModal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-labelledby="modalTitle">
+      <button class="modal-close" id="closeLoginBtn" aria-label="Close modal">&times;</button>
+      <div class="modal-header">
+        <h2 id="modalTitle">Access Control Center</h2>
+        <p style="color: var(--muted); margin-top: 0.5rem; font-size: 0.95rem;">Select your operational role</p>
+      </div>
+      <div class="modal-form">
+        <div class="field-group">
+          <label for="loginEmail">Email ID</label>
+          <input type="email" id="loginEmail" placeholder="officer@nscns.example" class="form-input" />
+        </div>
+        <div class="field-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" class="form-input" />
+        </div>
+        <div class="field-group">
+          <label for="loginRole">Clearance Level</label>
+          <select id="loginRole" class="form-input">
+            <option value="warehouse">Warehouse Manager</option>
+            <option value="driver">Fleet Driver</option>
+          </select>
+        </div>
+        <div class="action-row" style="margin-top: 1.5rem;">
+          <button class="btn" id="loginSubmitBtn" style="width: 100%;">Authenticate &rarr;</button>
+        </div>
+        <div style="text-align: center; margin-top: 1rem;">
+          <small id="loginError" style="color: var(--risk); display: none;">Invalid credentials</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-wrap">
+      <p>NSCNS Concept Website</p>
+      <p>Built for strategic presentation and policy discussion</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
