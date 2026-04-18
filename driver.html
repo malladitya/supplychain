@@ -11,22 +11,22 @@
     rel="stylesheet"
   />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="auth-check.js"></script>
   <style>
-    body {
-      background: #02080c;
-    }
+    body { background: #02080c; }
+
     .bg-shape-driver {
       position: fixed;
-      width: 300px;
-      height: 300px;
+      width: 300px; height: 300px;
       border-radius: 50%;
       filter: blur(80px);
       background: rgba(128, 237, 153, 0.15);
-      top: -50px;
-      left: -50px;
+      top: -50px; left: -50px;
       z-index: -1;
       animation: pulse-dot 4s infinite alternate;
     }
+
     .driver-app {
       max-width: 480px;
       margin: 0 auto;
@@ -35,22 +35,16 @@
       display: flex;
       flex-direction: column;
     }
+
     .driver-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 2rem;
     }
-    .driver-profile img {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 2px solid var(--accent);
-    }
-    .driver-status {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
+
+    .driver-status { text-align: center; margin-bottom: 1.5rem; }
+
     .big-score {
       font-size: 5rem;
       font-family: "Sora", sans-serif;
@@ -60,6 +54,7 @@
       background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+
     .route-card {
       background: rgba(255, 255, 255, 0.04);
       backdrop-filter: blur(14px);
@@ -69,91 +64,146 @@
       padding: 1.5rem;
       margin-bottom: 1.5rem;
     }
+
     .route-timeline {
       position: relative;
       padding-left: 20px;
       border-left: 2px dashed rgba(255,255,255,0.2);
     }
-    .timeline-step {
-      position: relative;
-      margin-bottom: 1.5rem;
-    }
+
+    .timeline-step { position: relative; margin-bottom: 1.5rem; }
+    .timeline-step:last-child { margin-bottom: 0; }
+
     .timeline-step::before {
       content: "";
       position: absolute;
-      left: -26px;
-      top: 4px;
-      width: 10px;
-      height: 10px;
+      left: -26px; top: 4px;
+      width: 10px; height: 10px;
       background: var(--accent);
       border-radius: 50%;
       box-shadow: 0 0 10px var(--accent);
     }
+
     .action-grid {
       display: grid;
       gap: 1rem;
       margin-top: auto;
-      padding-top: 2rem;
+      padding-top: 1.5rem;
     }
-    .btn-driver {
-      font-size: 1.1rem;
-      padding: 1rem;
-    }
-    .btn-alert {
-      background: linear-gradient(120deg, #ff6b6b, #c92a2a);
-      color: #fff;
-    }
+
+    .btn-driver { font-size: 1.1rem; padding: 1rem; }
+    .btn-alert  { background: linear-gradient(120deg, #ff6b6b, #c92a2a); color: #fff; }
+
     #rerouteAlert {
       display: none;
       background: rgba(255, 209, 102, 0.15);
       border: 1px solid var(--warn);
       padding: 1rem;
       border-radius: 12px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
       animation: popIn 0.3s ease;
     }
     @keyframes popIn {
       from { transform: scale(0.9); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    /* Auto-reroute countdown bar */
+    #rerouteCountdown {
+      display: none;
+      background: rgba(255, 107, 107, 0.12);
+      border: 1px solid rgba(255, 107, 107, 0.4);
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #ffd4d4;
+      display: none;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    #rerouteCountdown .cd-num {
+      font-size: 1.4rem;
+      font-weight: 800;
+      font-family: "Sora", sans-serif;
+      color: #ff6b6b;
+      min-width: 1.6rem;
+      display: inline-block;
+      text-align: center;
+    }
+
+    /* Toast notification overlay */
+    #driverMapNotification {
+      display: none;
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 25, 36, 0.92);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--text);
+      padding: 0.8rem 1.4rem;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      max-width: 90vw;
+      text-align: center;
+      z-index: 9999;
+      backdrop-filter: blur(16px);
+      transition: opacity 0.4s ease;
+      opacity: 0;
+    }
+    #driverMapNotification.visible {
+      display: block;
+      opacity: 1;
     }
   </style>
 </head>
 <body>
   <div class="bg-shape-driver"></div>
-  
+
   <div class="driver-app">
     <header class="driver-header">
       <div>
         <h2 style="font-size: 1.2rem;">Fleet Unit #710</h2>
-        <p class="muted" style="color: var(--muted); font-size: 0.9rem;">Central Corridor</p>
+        <p style="color: var(--muted); font-size: 0.9rem;">Central Corridor · Delhi → Lucknow</p>
       </div>
-      <a href="index.html" class="btn btn-small btn-ghost">Logout</a>
+      <button onclick="logout()" class="btn btn-small btn-ghost" style="cursor: pointer;">Logout</button>
     </header>
 
     <div class="driver-status">
       <p class="eyebrow">Current Route Chaos Score</p>
       <h1 class="big-score" id="driverScore">24</h1>
-      <p style="color: var(--ok); font-weight: 700;" id="driverState">Stable & Green</p>
+      <p style="color: var(--ok); font-weight: 700;" id="driverState">Stable &amp; Green</p>
     </div>
 
+    <!-- Reroute alert banner -->
     <div id="rerouteAlert">
       <h3 style="color: var(--warn); margin-bottom: 0.5rem;">⚠️ Chaos Spike Detected!</h3>
-      <p style="font-size: 0.9rem; margin-bottom: 1rem;">Congestion + Weather pressure ahead. AI recommends alternative route.</p>
-      <button class="btn btn-small" id="acceptRouteBtn">Accept Reroute</button>
+      <p style="font-size: 0.9rem; margin-bottom: 1rem;">Congestion + Weather ahead. AI is computing bypass route…</p>
+      <button class="btn btn-small" id="acceptRouteBtn">Accept Reroute Now</button>
     </div>
 
-    <div class="route-card">
-      <h3 style="margin-bottom: 1rem;">Active Manifest: Medical Supp.</h3>
+    <!-- Auto-reroute countdown -->
+    <div id="rerouteCountdown">
+      🤖 AI Auto-Rerouting in <span id="countdownValue" class="cd-num">5</span>s
+      <span style="color:var(--muted); font-size:0.8rem;">— or click Accept above</span>
+    </div>
+
+    <!-- Live Route Map -->
+    <div id="driverMap" style="height:260px; border-radius:16px; overflow:hidden; margin-bottom:1.5rem; background:#0d1f2d;"></div>
+
+    <div class="route-card" id="routeCard">
+      <h3 style="margin-bottom: 1rem;">Active Manifest: Medical Supplies</h3>
       <div class="route-timeline">
         <div class="timeline-step">
           <strong>Origin: North Hub</strong>
-          <p style="color:var(--muted); font-size:0.85rem;">Departed 08:00 AM</p>
+          <p style="color:var(--muted); font-size:0.85rem;">Departed 08:00 AM · New Delhi</p>
         </div>
-        <div class="timeline-step">
-          <strong>Checkpoint: Highway 9</strong>
+        <div class="timeline-step" id="checkpointStep">
+          <strong>Checkpoint: Agra Highway 9</strong>
           <p style="color:var(--muted); font-size:0.85rem;">ETA 10:15 AM</p>
         </div>
-        <div class="timeline-step" style="margin-bottom: 0;">
+        <div class="timeline-step" style="margin-bottom:0;">
           <strong>Dest: City Hospital</strong>
           <p style="color:var(--muted); font-size:0.85rem;">ETA 11:30 AM</p>
         </div>
@@ -166,46 +216,84 @@
     </div>
   </div>
 
+  <!-- Toast notification -->
+  <div id="driverMapNotification"></div>
+
+  <!-- Scripts: events.js → supabase → Leaflet → map.js → inline logic -->
+  <script src="events.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="map.js"></script>
+
   <script>
-    // Mock Driver Intelligence
-    const driverScore = document.getElementById('driverScore');
-    const driverState = document.getElementById('driverState');
-    const rerouteAlert = document.getElementById('rerouteAlert');
-    const reportCongestionBtn = document.getElementById('reportCongestionBtn');
-    const acceptRouteBtn = document.getElementById('acceptRouteBtn');
-    
+    // ── DOM refs ──────────────────────────────────────────
+    const driverScoreEl    = document.getElementById('driverScore');
+    const driverStateEl    = document.getElementById('driverState');
+    const rerouteAlert     = document.getElementById('rerouteAlert');
+    const reportBtn        = document.getElementById('reportCongestionBtn');
+    const acceptRouteBtn   = document.getElementById('acceptRouteBtn');
+    const checkpointStep   = document.getElementById('checkpointStep');
     let score = 24;
 
-    reportCongestionBtn.addEventListener('click', () => {
-      // Simulate real-time chaos reporting
+    // ── Init map after page loads ────────────────────────
+    document.addEventListener('DOMContentLoaded', () => initDriverMap());
+
+    // ── Report Congestion ────────────────────────────────
+    reportBtn.addEventListener('click', () => {
       score = 78;
-      driverScore.textContent = score;
-      driverScore.style.background = 'linear-gradient(120deg, #ff6b6b, #c92a2a)';
-      driverScore.style.webkitBackgroundClip = 'text';
-      driverState.textContent = 'High Alert';
-      driverState.style.color = 'var(--risk)';
-      reportCongestionBtn.disabled = true;
-      reportCongestionBtn.textContent = 'Reported';
-      
-      // Auto trigger reroute warning
-      setTimeout(() => {
-        rerouteAlert.style.display = 'block';
-      }, 800);
+      driverScoreEl.textContent = score;
+      driverScoreEl.style.background = 'linear-gradient(120deg, #ff6b6b, #c92a2a)';
+      driverScoreEl.style.webkitBackgroundClip = 'text';
+      driverStateEl.textContent = 'High Alert';
+      driverStateEl.style.color = 'var(--risk)';
+      reportBtn.disabled = true;
+      reportBtn.textContent = '⚠️ Congestion Reported';
+
+      // Trigger map (also starts auto-reroute countdown + emits event)
+      triggerCongestionOnMap();
+
+      // Show reroute banner after short delay
+      setTimeout(() => { rerouteAlert.style.display = 'block'; }, 600);
     });
 
+    // ── Manual "Accept Reroute" ──────────────────────────
     acceptRouteBtn.addEventListener('click', () => {
-      rerouteAlert.innerHTML = '<p style="color: var(--ok)">Route updated! Rerouting to safe lane...</p>';
+      if (typeof triggerRerouteOnMap === 'function') triggerRerouteOnMap();
+      _applyRerouteUI();
+    });
+
+    // ── Auto-reroute fired by map.js countdown ───────────
+    window.addEventListener('auto_rerouted', () => _applyRerouteUI());
+
+    function _applyRerouteUI() {
+      rerouteAlert.innerHTML = `<p style="color:var(--ok); font-weight:600;">🤖 AI Rerouted! Jhansi bypass activated.</p>`;
+
+      // Update route card checkpoint
+      if (checkpointStep) {
+        checkpointStep.querySelector('strong').textContent = 'Bypass: Jhansi → Allahabad';
+        checkpointStep.querySelector('p').textContent = 'ETA revised · 12:00 PM (safer lane)';
+      }
+
       setTimeout(() => {
         rerouteAlert.style.display = 'none';
-        score = 35; // score goes down
-        driverScore.textContent = score;
-        driverScore.style.background = 'linear-gradient(120deg, var(--ok), #38b000)';
-        driverScore.style.webkitBackgroundClip = 'text';
-        driverState.textContent = 'Stable';
-        driverState.style.color = 'var(--ok)';
-        reportCongestionBtn.disabled = false;
-        reportCongestionBtn.textContent = 'Report Local Congestion';
-      }, 1500);
+        score = 35;
+        driverScoreEl.textContent = score;
+        driverScoreEl.style.background = 'linear-gradient(120deg, var(--ok), #38b000)';
+        driverScoreEl.style.webkitBackgroundClip = 'text';
+        driverStateEl.textContent = 'Stable · Bypass Active';
+        driverStateEl.style.color = 'var(--ok)';
+        reportBtn.disabled = false;
+        reportBtn.textContent = 'Report Local Congestion';
+      }, 2500);
+    }
+
+    // ── Confirm Delivery ─────────────────────────────────
+    document.getElementById('confirmDeliveryBtn').addEventListener('click', () => {
+      const btn = document.getElementById('confirmDeliveryBtn');
+      btn.textContent = '✅ Delivered!';
+      btn.disabled = true;
+      emitMapEvent(EVT.DRIVER_DELIVERED, { unit: '#710', location: 'Lucknow City Hospital' });
     });
   </script>
 </body>

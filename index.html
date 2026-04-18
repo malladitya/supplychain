@@ -15,6 +15,7 @@
     rel="stylesheet"
   />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
   <div class="bg-shape bg-shape-1" aria-hidden="true"></div>
@@ -25,6 +26,7 @@
       <a href="#home" class="brand">
         <span class="brand-dot"></span>
         NSCNS
+        <span class="live-indicator"><span class="live-dot"></span> LIVE</span>
       </a>
       <nav class="nav-links" aria-label="Primary">
         <a href="#problem">Problem</a>
@@ -36,7 +38,22 @@
       <div class="header-actions" style="display: flex; gap: 0.8rem;">
         <a class="btn btn-small btn-ghost" href="#contact">Discuss</a>
         <button class="btn btn-small" id="openLoginBtn">Login <span aria-hidden="true">&rarr;</span></button>
+        <button class="menu-toggle" id="menuToggle" aria-label="Open menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
+    </div>
+    <div class="mobile-nav" id="mobileNav">
+      <nav aria-label="Mobile">
+        <a href="#problem">Problem</a>
+        <a href="#features">Features</a>
+        <a href="#control-center">Control Center</a>
+        <a href="#impact">Impact</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#contact">Discuss</a>
+      </nav>
     </div>
   </header>
 
@@ -53,6 +70,7 @@
           <div class="hero-actions">
             <a class="btn" href="#features">Explore Features</a>
             <a class="btn btn-ghost" href="#roadmap">View Rollout Plan</a>
+            <button class="btn btn-flood" id="startFloodDemoBtn" onclick="FLOOD_DEMO.start()">🌊 Run Punjab Flood Demo</button>
           </div>
           <ul class="hero-metrics">
             <li>
@@ -209,6 +227,12 @@
           </div>
 
           <div class="command-output reveal">
+            <!-- Emergency Banner (Feature 6) -->
+            <div id="emergencyBanner" style="display:none; background:rgba(255,107,107,0.15); border:1px solid #ff6b6b; border-radius:10px; padding:0.75rem 1.2rem; margin-bottom:1rem;">
+              <strong id="emergencyLevel" style="color:#ff6b6b;">🚨 EMERGENCY MODE: HIGH</strong>
+              <span style="color:var(--muted); font-size:0.85rem; margin-left:1rem;">Priority routing: Medical · Food · Rescue</span>
+            </div>
+
             <div class="status-strip">
               <div class="status-chip">
                 <span class="status-label">Chaos Score</span>
@@ -230,10 +254,10 @@
             <div class="dashboard-grid">
               <article class="dashboard-card dashboard-span-2">
                 <div class="card-heading">
-                  <h3>Live visualization</h3>
-                  <p>Regional state heatmap generated from the current scenario.</p>
+                  <h3>Live Map · OpenStreetMap</h3>
+                  <p>Real-time regional node chaos status across India's logistics network.</p>
                 </div>
-                <div id="liveMap" class="live-map" aria-label="Regional heatmap"></div>
+                <div id="liveMap" class="osm-map-container" aria-label="Regional logistics map"></div>
               </article>
 
               <article class="dashboard-card">
@@ -291,11 +315,64 @@
                 </div>
                 <ul id="historyList" class="detail-list"></ul>
               </article>
+              <!-- F2: Self-Healing -->
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>⚙️ Self-Healing Engine</h3>
+                  <p>Dijkstra/A* auto-rerouting when score exceeds threshold.</p>
+                </div>
+                <div id="selfHealStatus" style="font-size:0.85rem; line-height:1.7; color:var(--muted); padding:0.5rem 0;">Computing…</div>
+              </article>
+
+              <!-- F3: Crisis Prediction -->
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>🔮 Crisis Prediction · 48h</h3>
+                  <p>LSTM shortage forecasts for food, medicine, fuel.</p>
+                </div>
+                <div id="crisisPredPanel" class="pred-panel"></div>
+              </article>
+
+              <!-- F13: Live Supply-Demand Heatmap -->
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>🗺️ Supply-Demand Heatmap</h3>
+                  <p>Live stock flow status across all regions.</p>
+                </div>
+                <div id="heatmapPanel" class="heatmap-panel"></div>
+              </article>
+
+              <!-- F12: Offline Mode -->
+              <article class="dashboard-card">
+                <div class="card-heading">
+                  <h3>📡 Offline-Aware Mode</h3>
+                  <p>Edge nodes for low-connectivity regions.</p>
+                </div>
+                <div id="offlineCachePanel" style="font-size:0.85rem; line-height:1.7; padding:0.5rem 0; color:var(--muted);">Checking connectivity…</div>
+              </article>
+
             </div>
           </div>
         </div>
       </div>
     </section>
+
+    <!-- ════ PUNJAB FLOOD DEMO CONSOLE ════ -->
+    <div id="floodDemoConsole" style="display:none; position:fixed; bottom:1.5rem; right:1.5rem; width:360px; z-index:9999; background:rgba(6,22,31,0.95); border:1px solid rgba(255,107,107,0.5); border-radius:16px; padding:1.2rem; box-shadow:0 12px 48px rgba(255,107,107,0.3); backdrop-filter:blur(20px); font-family:'Space Grotesk',sans-serif;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span style="width:8px;height:8px;background:#ff6b6b;border-radius:50%;display:inline-block;animation:pulse-live 1s infinite;"></span>
+          <strong style="color:#ff6b6b; font-size:0.85rem;">LIVE SIM · Punjab Flood</strong>
+        </div>
+        <button onclick="FLOOD_DEMO.stop()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;">✕</button>
+      </div>
+      <div id="demoCurrentStep" style="font-size:0.9rem; color:var(--text); margin-bottom:0.8rem; font-weight:600;">Initializing…</div>
+      <div id="demoStepList" style="max-height:200px; overflow-y:auto; font-size:0.8rem;"></div>
+      <div style="margin-top:0.8rem; background:rgba(255,255,255,0.06); border-radius:6px; overflow:hidden; height:6px;">
+        <div id="demoProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg,#80ed99,#ffd166); transition:width 0.8s ease;"></div>
+      </div>
+      <p style="font-size:0.72rem; color:var(--muted); margin-top:0.6rem;">📍 Showing all 13 features in sequence. Duration: ~22s</p>
+    </div>
 
     <section id="impact" class="section">
       <div class="container impact-grid">
@@ -401,6 +478,13 @@
     </div>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="events.js"></script>
+  <script src="features.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="map.js"></script>
+  <script src="flood-demo.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

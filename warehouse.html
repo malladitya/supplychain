@@ -11,6 +11,8 @@
     rel="stylesheet"
   />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="auth-check.js"></script>
   <style>
     .wh-layout {
       display: grid;
@@ -104,7 +106,7 @@
         <a href="#">Audit Logs</a>
       </nav>
       <div style="position: absolute; bottom: 2rem;">
-        <a href="index.html" class="btn btn-small btn-ghost">Sign Out</a>
+        <button onclick="logout()" class="btn btn-small btn-ghost" style="width: 100%; cursor: pointer;">Sign Out</button>
       </div>
     </aside>
 
@@ -141,6 +143,12 @@
         </div>
       </div>
 
+      <!-- Supply Network Map -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="font-size:1rem; margin-bottom:0.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">Supply Network Map</h3>
+        <div id="whMap" class="osm-map-container" style="height:300px;"></div>
+      </div>
+
       <div class="ai-panel">
         <h2 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
           <span class="brand-dot" style="animation: none;"></span> 
@@ -165,32 +173,39 @@
     </main>
   </div>
 
+  <script src="events.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="map.js"></script>
   <script>
-    const approveTransferBtn = document.getElementById('approveTransferBtn');
-    const transferFeedback = document.getElementById('transferFeedback');
-    
-    approveTransferBtn.addEventListener('click', () => {
-      approveTransferBtn.disabled = true;
-      approveTransferBtn.textContent = 'Processing...';
-      
-      setTimeout(() => {
-        approveTransferBtn.style.display = 'none';
-        transferFeedback.style.display = 'inline';
-        
-        // Slightly update the food bar to show it going up!
-        const foodFill = document.querySelectorAll('.progress-fill')[1];
-        const foodStat = document.querySelectorAll('.stat-val')[1];
-        const foodDesc = document.querySelectorAll('.stat-card p:nth-of-type(3)')[1];
-        
-        foodFill.style.width = '85%';
-        foodFill.style.background = 'var(--ok)';
-        foodFill.style.transition = 'all 1.5s ease-in-out';
-        
-        foodStat.textContent = '85%';
-        foodStat.style.color = 'var(--ok)';
-        foodDesc.textContent = 'Transfer Incoming';
-        foodDesc.style.color = 'var(--ok)';
-      }, 1000);
+    document.addEventListener('DOMContentLoaded', () => {
+      initWarehouseMap();
+
+      // Approve Transfer button — triggers map animation + event broadcast
+      const approveBtn      = document.getElementById('approveTransferBtn');
+      const transferFeedback = document.getElementById('transferFeedback');
+
+      approveBtn.addEventListener('click', () => {
+        approveBtn.disabled = true;
+        approveBtn.textContent = 'Processing…';
+
+        setTimeout(() => {
+          approveBtn.style.display = 'none';
+          transferFeedback.style.display = 'inline';
+
+          // Animate transfer on warehouse map + emit to all dashboards
+          if (typeof highlightWarehouseTransfer === 'function') highlightWarehouseTransfer();
+
+          // Update food stat card
+          const foodFill = document.querySelectorAll('.progress-fill')[1];
+          const foodStat = document.querySelectorAll('.stat-val')[1];
+          const foodDesc = document.querySelectorAll('.stat-card p:nth-of-type(3)')[1];
+          if (foodFill) { foodFill.style.width = '85%'; foodFill.style.background = 'var(--ok)'; foodFill.style.transition = 'all 1.5s ease-in-out'; }
+          if (foodStat) { foodStat.textContent = '85%'; foodStat.style.color = 'var(--ok)'; }
+          if (foodDesc) { foodDesc.textContent = 'Transfer Incoming'; foodDesc.style.color = 'var(--ok)'; }
+        }, 1000);
+      });
     });
   </script>
 </body>

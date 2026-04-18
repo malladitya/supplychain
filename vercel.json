@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "nscns-logistics-platform",
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/warehouse", "destination": "/warehouse.html" },
+    { "source": "/driver", "destination": "/driver.html" }
+  ]
+}

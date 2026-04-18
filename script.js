@@ -614,6 +614,107 @@ function render() {
   renderRegionGrid(regionViews);
   renderLiveMap(regionViews);
 
+  // ── Run all 13 Feature Engines ──────────────────────────
+  if (typeof ChaosEngine !== 'undefined') {
+    // F1: Chaos Score formula badge
+    const zone = ChaosEngine.getZone(primaryRegion.score);
+    const featureBadge = document.getElementById('featureScoreBadge');
+    if (featureBadge) {
+      featureBadge.textContent = `${zone.badge} ${zone.status}`;
+      featureBadge.style.color = zone.color;
+    }
+  }
+
+  if (typeof SelfHealingEngine !== 'undefined') {
+    // F2: Self-healing — show bypass if threshold exceeded
+    const healing = SelfHealingEngine.heal('north', 'central', primaryRegion.score);
+    const healPanel = document.getElementById('selfHealStatus');
+    if (healPanel) {
+      healPanel.innerHTML = healing
+        ? `<span style="color:#80ed99">⚙️ ${healing.action}: ${healing.affectedShipments} shipments via ${healing.selectedRoute} (+${healing.costIncrease})</span>`
+        : `<span style="color:var(--muted)">No healing required. Score below threshold (${SelfHealingEngine.THRESHOLD}).</span>`;
+    }
+  }
+
+  if (typeof CrisisPrediction !== 'undefined') {
+    // F3: Crisis prediction → update forecast labels
+    const cPred = CrisisPrediction.forecast(primaryRegion.score, scenario.event);
+    const predPanel = document.getElementById('crisisPredPanel');
+    if (predPanel) {
+      predPanel.innerHTML = `
+        <div class="pred-row"><span>🍲 Food</span><span style="color:${cPred.overall==='Severe'?'#ff6b6b':'#ffd166'}">${cPred.food.shortageIn48h}% risk / 48h</span></div>
+        <div class="pred-row"><span>💊 Medical</span><span style="color:${cPred.medical.shortageIn48h>60?'#ff6b6b':'#ffd166'}">${cPred.medical.shortageIn48h}% risk / 48h</span></div>
+        <div class="pred-row"><span>⛽ Fuel</span><span style="color:${cPred.fuel.shortageIn48h>60?'#ff6b6b':'#ffd166'}">${cPred.fuel.shortageIn48h}% risk / 48h</span></div>`;
+    }
+  }
+
+  if (typeof AllocationEngine !== 'undefined') {
+    // F4: Dynamic allocation → drive map arrows
+    const allocs = AllocationEngine.allocate(regionViews);
+    if (typeof showAllocationFlows === 'function' && allocs.length) {
+      const mappedAllocs = allocs.map(a => ({
+        ...a,
+        fromCoords: a.from === 'north' ? [28.6139,77.2090] : a.from === 'central' ? [23.2599,77.4126] : a.from === 'south' ? [12.9716,77.5946] : [19.0760,72.8777],
+        toCoords:   a.to   === 'north' ? [28.6139,77.2090] : a.to   === 'central' ? [23.2599,77.4126] : a.to   === 'south' ? [12.9716,77.5946] : [19.0760,72.8777],
+      }));
+      if (primaryRegion.score > 65) showAllocationFlows(mappedAllocs);
+    }
+  }
+
+  if (typeof EmergencyEngine !== 'undefined') {
+    // F6: Emergency — update response panel
+    const emerg = EmergencyEngine.assess(primaryRegion.score, scenario.emergency, scenario.event);
+    const emergBanner = document.getElementById('emergencyBanner');
+    if (emergBanner) {
+      emergBanner.style.display = emerg.active ? 'block' : 'none';
+      if (emerg.active) {
+        const lvlEl = document.getElementById('emergencyLevel');
+        if (lvlEl) lvlEl.textContent = `🚨 EMERGENCY MODE: ${emerg.level}`;
+      }
+    }
+  }
+
+  if (typeof OfflineSystem !== 'undefined') {
+    // F12: Offline zones — drive map grey areas
+    const zones = OfflineSystem.getZones(scenario.offline);
+    if (typeof showOfflineZones === 'function') showOfflineZones(zones);
+    else if (typeof clearOfflineZones === 'function') clearOfflineZones();
+    const cachePanel = document.getElementById('offlineCachePanel');
+    if (cachePanel) {
+      const cs = OfflineSystem.getCacheStatus(scenario.offline);
+      cachePanel.innerHTML = `<span style="color:${scenario.offline?'#ffd166':'#80ed99'}">${cs.mode}</span><br><small style="color:var(--muted)">${cs.cached}</small>`;
+    }
+  }
+
+  if (typeof SupplyDashboard !== 'undefined') {
+    // F13: Live heatmap panel
+    const hmap = SupplyDashboard.buildHeatmap(regionViews);
+    const hmapPanel = document.getElementById('heatmapPanel');
+    if (hmapPanel) {
+      hmapPanel.innerHTML = hmap.map(h => `
+        <div class="heatmap-row">
+          <span>${h.label}</span>
+          <span>${h.flowDir}</span>
+          <strong style="color:${h.color}">${h.status}</strong>
+        </div>`).join('');
+    }
+  }
+
+  // ── Update Leaflet OSM map ──────────────────────────────
+  if (typeof updateNationalMap === 'function') {
+    updateNationalMap(regionViews, scenario.region);
+  }
+
+  // ── Broadcast to Driver + Warehouse dashboards ──────────
+  if (typeof emitMapEvent === 'function') {
+    emitMapEvent(EVT.HQ_SCENARIO_CHANGED, {
+      chaosScore: primaryRegion.score,
+      region: scenario.region,
+      event: scenario.event,
+      emergency: scenario.emergency,
+    });
+  }
+
   if (outputs.policyCompare) {
     outputs.policyCompare.textContent = `${policyAssessment.compare} Event overlay: ${eventProfile.label}.`;
   }
@@ -697,9 +798,28 @@ function wireControls() {
 
       syncFromControls();
       render();
+      syncScenario(scenario); // Sync to DB
     };
 
     control.addEventListener(control.type === "checkbox" || control.tagName === "SELECT" ? "change" : "input", handler);
+  });
+
+  // Subscribe to real-time updates from other users
+  subscribeToState((newState) => {
+    Object.assign(scenario, newState);
+    render();
+    
+    // Update local UI controls to match remote state
+    if (controls.stressRange) controls.stressRange.value = scenario.weather;
+    if (controls.weatherRange) controls.weatherRange.value = scenario.weather;
+    if (controls.trafficRange) controls.trafficRange.value = scenario.traffic;
+    if (controls.demandRange) controls.demandRange.value = scenario.demand;
+    if (controls.integrationRange) controls.integrationRange.value = scenario.integration;
+    if (controls.regionSelect) controls.regionSelect.value = scenario.region;
+    if (controls.eventSelect) controls.eventSelect.value = scenario.event;
+    if (controls.policySelect) controls.policySelect.value = scenario.policy;
+    if (controls.emergencyToggle) controls.emergencyToggle.checked = scenario.emergency;
+    if (controls.offlineToggle) controls.offlineToggle.checked = scenario.offline;
   });
 
   controls.runScenarioBtn?.addEventListener("click", () => {
@@ -775,6 +895,27 @@ if (openLoginBtn && loginModal) {
   });
 }
 
+// Mobile Menu Toggle
+const menuToggle = document.getElementById("menuToggle");
+const mobileNav = document.getElementById("mobileNav");
+
+if (menuToggle && mobileNav) {
+  menuToggle.addEventListener("click", () => {
+    menuToggle.classList.toggle("active");
+    mobileNav.classList.toggle("active");
+    document.body.style.overflow = mobileNav.classList.contains("active") ? "hidden" : "";
+  });
+
+  // Close menu when clicking a link
+  mobileNav.querySelectorAll("a").forEach(link => {
+    link.addEventListener("click", () => {
+      menuToggle.classList.remove("active");
+      mobileNav.classList.remove("active");
+      document.body.style.overflow = "";
+    });
+  });
+}
+
 if (closeLoginBtn && loginModal) {
   closeLoginBtn.addEventListener("click", () => {
     loginModal.classList.remove("active");
@@ -797,6 +938,14 @@ if (loginSubmitBtn) {
     
     setTimeout(() => {
       const selectedRole = loginRole.value;
+      // In a real app, you'd verify credentials here.
+      // For this prototype, we'll simulate a successful login.
+      sessionStorage.setItem('nscns_auth', JSON.stringify({
+        email: loginEmail.value,
+        role: selectedRole,
+        time: new Date().toISOString()
+      }));
+
       if (selectedRole === "warehouse") {
         window.location.href = "warehouse.html";
       } else {
@@ -809,3 +958,6 @@ if (loginSubmitBtn) {
 initializeControls();
 wireControls();
 render();
+
+// Initialize national Leaflet map (requires DOM to be ready)
+if (typeof initNationalMap === 'function') initNationalMap();
