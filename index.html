@@ -70,7 +70,7 @@
           <div class="hero-actions">
             <a class="btn" href="#features">Explore Features</a>
             <a class="btn btn-ghost" href="#roadmap">View Rollout Plan</a>
-            <button class="btn btn-flood" id="startFloodDemoBtn" onclick="FLOOD_DEMO.start()">🌊 Run Punjab Flood Demo</button>
+            <a class="btn btn-ghost" href="hq.html">Open HQ Command</a>
           </div>
           <ul class="hero-metrics">
             <li>
@@ -155,225 +155,32 @@
 
     <section id="control-center" class="section control-section">
       <div class="container">
-        <p class="eyebrow reveal">Operational Prototype</p>
-        <h2 class="section-title reveal">Run scenarios, reroute supply, and inspect the AI rationale</h2>
-        <div class="control-shell">
-          <div class="control-panel reveal">
-            <div class="panel-head">
-              <h3>Scenario Builder</h3>
-              <p>Adjust the operating context to simulate stress, response, and recovery.</p>
-            </div>
-            <div class="control-stack">
-              <div class="field-group">
-                <label for="regionSelect">Primary region</label>
-                <select id="regionSelect">
-                  <option value="north">North Hub</option>
-                  <option value="central" selected>Central Corridor</option>
-                  <option value="south">South Arc</option>
-                  <option value="coastal">Coastal Belt</option>
-                </select>
-              </div>
-              <div class="field-group">
-                <label for="eventSelect">Event awareness</label>
-                <select id="eventSelect">
-                  <option value="normal" selected>Normal operations</option>
-                  <option value="festival">Festival surge</option>
-                  <option value="election">Election logistics</option>
-                  <option value="storm">Severe storm</option>
-                  <option value="disaster">Disaster response</option>
-                </select>
-              </div>
-              <div class="field-group">
-                <label for="weatherRange">Weather pressure</label>
-                <input type="range" id="weatherRange" min="0" max="100" value="38" />
-              </div>
-              <div class="field-group">
-                <label for="trafficRange">Traffic congestion</label>
-                <input type="range" id="trafficRange" min="0" max="100" value="52" />
-              </div>
-              <div class="field-group">
-                <label for="demandRange">Demand pressure</label>
-                <input type="range" id="demandRange" min="0" max="100" value="64" />
-              </div>
-              <div class="field-group">
-                <label for="integrationRange">Public-private integration</label>
-                <input type="range" id="integrationRange" min="0" max="100" value="76" />
-              </div>
-              <div class="field-group">
-                <label for="policySelect">Policy simulator</label>
-                <select id="policySelect">
-                  <option value="balanced" selected>Balanced response</option>
-                  <option value="resilience">Resilience first</option>
-                  <option value="cost">Cost control</option>
-                  <option value="equity">Equity allocation</option>
-                </select>
-              </div>
-              <div class="toggle-row">
-                <label class="toggle-pill">
-                  <input type="checkbox" id="emergencyToggle" />
-                  <span>Emergency mode</span>
-                </label>
-                <label class="toggle-pill">
-                  <input type="checkbox" id="offlineToggle" />
-                  <span>Offline-aware fallback</span>
-                </label>
-              </div>
-              <div class="action-row">
-                <button class="btn" id="runScenarioBtn" type="button">Run scenario</button>
-                <button class="btn btn-ghost" id="healScenarioBtn" type="button">Auto-reroute</button>
-                <button class="btn btn-ghost" id="saveLessonBtn" type="button">Save lesson</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="command-output reveal">
-            <!-- Emergency Banner (Feature 6) -->
-            <div id="emergencyBanner" style="display:none; background:rgba(255,107,107,0.15); border:1px solid #ff6b6b; border-radius:10px; padding:0.75rem 1.2rem; margin-bottom:1rem;">
-              <strong id="emergencyLevel" style="color:#ff6b6b;">🚨 EMERGENCY MODE: HIGH</strong>
-              <span style="color:var(--muted); font-size:0.85rem; margin-left:1rem;">Priority routing: Medical · Food · Rescue</span>
-            </div>
-
-            <div class="status-strip">
-              <div class="status-chip">
-                <span class="status-label">Chaos Score</span>
-                <strong id="chaosScore">62</strong>
-                <small id="chaosState">High Alert</small>
-              </div>
-              <div class="status-chip">
-                <span class="status-label">Predicted Shortage</span>
-                <strong id="forecastValue">Moderate</strong>
-                <small id="forecastDetail">Food, medical, and fuel buffers under watch</small>
-              </div>
-              <div class="status-chip">
-                <span class="status-label">Response Mode</span>
-                <strong id="responseMode">Standard</strong>
-                <small id="responseDetail">Balanced routing and manual oversight</small>
-              </div>
-            </div>
-
-            <div class="dashboard-grid">
-              <article class="dashboard-card dashboard-span-2">
-                <div class="card-heading">
-                  <h3>Live Map · OpenStreetMap</h3>
-                  <p>Real-time regional node chaos status across India's logistics network.</p>
-                  <small id="routeDataStatus" class="route-status">Loading route provider…</small>
-                </div>
-                <div id="liveMap" class="osm-map-container" aria-label="Regional logistics map"></div>
-              </article>
-
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>Explainable AI</h3>
-                  <p>Factors driving the current recommendation.</p>
-                </div>
-                <ul id="explainList" class="detail-list"></ul>
-              </article>
-
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>Dynamic allocation</h3>
-                  <p>Recommended redistribution between regions.</p>
-                </div>
-                <ul id="allocationList" class="detail-list"></ul>
-              </article>
-
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>Crisis prediction</h3>
-                  <p>Shortage outlook for essential categories.</p>
-                </div>
-                <ul id="forecastList" class="detail-list"></ul>
-              </article>
-
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>Multi-node AI</h3>
-                  <p>Local decision nodes with national coordination.</p>
-                </div>
-                <div id="regionGrid" class="region-grid"></div>
-              </article>
-
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>Policy simulator</h3>
-                  <p id="policyCompare">Balanced policy maintains resilience without overcorrecting cost.</p>
-                </div>
-                <ul id="policyList" class="detail-list"></ul>
-              </article>
-
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>Public-private integration</h3>
-                  <p>Network status across government and commercial nodes.</p>
-                </div>
-                <ul id="integrationList" class="detail-list"></ul>
-              </article>
-
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>Memory learning</h3>
-                  <p>What the system remembers from prior runs.</p>
-                </div>
-                <ul id="historyList" class="detail-list"></ul>
-              </article>
-              <!-- F2: Self-Healing -->
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>⚙️ Self-Healing Engine</h3>
-                  <p>Dijkstra/A* auto-rerouting when score exceeds threshold.</p>
-                </div>
-                <div id="selfHealStatus" style="font-size:0.85rem; line-height:1.7; color:var(--muted); padding:0.5rem 0;">Computing…</div>
-              </article>
-
-              <!-- F3: Crisis Prediction -->
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>🔮 Crisis Prediction · 48h</h3>
-                  <p>LSTM shortage forecasts for food, medicine, fuel.</p>
-                </div>
-                <div id="crisisPredPanel" class="pred-panel"></div>
-              </article>
-
-              <!-- F13: Live Supply-Demand Heatmap -->
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>🗺️ Supply-Demand Heatmap</h3>
-                  <p>Live stock flow status across all regions.</p>
-                </div>
-                <div id="heatmapPanel" class="heatmap-panel"></div>
-              </article>
-
-              <!-- F12: Offline Mode -->
-              <article class="dashboard-card">
-                <div class="card-heading">
-                  <h3>📡 Offline-Aware Mode</h3>
-                  <p>Edge nodes for low-connectivity regions.</p>
-                </div>
-                <div id="offlineCachePanel" style="font-size:0.85rem; line-height:1.7; padding:0.5rem 0; color:var(--muted);">Checking connectivity…</div>
-              </article>
-
-            </div>
-          </div>
+        <p class="eyebrow reveal">Operations Gateway</p>
+        <h2 class="section-title reveal">Choose a focused workspace instead of a crowded all-in-one screen</h2>
+        <div class="problem-grid">
+          <article class="card reveal">
+            <h3>National HQ</h3>
+            <p>Live national command with route intelligence, weather fusion, and heartbeat synchronization.</p>
+            <a class="btn" href="hq.html">Open HQ Command</a>
+          </article>
+          <article class="card reveal">
+            <h3>Warehouse Node</h3>
+            <p>Approve transfers, watch inbound dependencies, and track fleet impact on local stock posture.</p>
+            <a class="btn" href="warehouse.html">Open Warehouse Console</a>
+          </article>
+          <article class="card reveal">
+            <h3>Driver Node</h3>
+            <p>Report congestion, accept reroutes, and synchronize field execution with national plans.</p>
+            <a class="btn" href="driver.html">Open Driver Console</a>
+          </article>
+          <article class="card reveal">
+            <h3>Quick Login</h3>
+            <p>Use role-based authentication to jump directly into HQ, warehouse, or driver interface.</p>
+            <button class="btn" id="openLoginBtnSecondary" type="button">Login by Role</button>
+          </article>
         </div>
       </div>
     </section>
-
-    <!-- ════ PUNJAB FLOOD DEMO CONSOLE ════ -->
-    <div id="floodDemoConsole" style="display:none; position:fixed; bottom:1.5rem; right:1.5rem; width:360px; z-index:9999; background:rgba(6,22,31,0.95); border:1px solid rgba(255,107,107,0.5); border-radius:16px; padding:1.2rem; box-shadow:0 12px 48px rgba(255,107,107,0.3); backdrop-filter:blur(20px); font-family:'Space Grotesk',sans-serif;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <span style="width:8px;height:8px;background:#ff6b6b;border-radius:50%;display:inline-block;animation:pulse-live 1s infinite;"></span>
-          <strong style="color:#ff6b6b; font-size:0.85rem;">LIVE SIM · Punjab Flood</strong>
-        </div>
-        <button onclick="FLOOD_DEMO.stop()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;">✕</button>
-      </div>
-      <div id="demoCurrentStep" style="font-size:0.9rem; color:var(--text); margin-bottom:0.8rem; font-weight:600;">Initializing…</div>
-      <div id="demoStepList" style="max-height:200px; overflow-y:auto; font-size:0.8rem;"></div>
-      <div style="margin-top:0.8rem; background:rgba(255,255,255,0.06); border-radius:6px; overflow:hidden; height:6px;">
-        <div id="demoProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg,#80ed99,#ffd166); transition:width 0.8s ease;"></div>
-      </div>
-      <p style="font-size:0.72rem; color:var(--muted); margin-top:0.6rem;">📍 Showing all 13 features in sequence. Duration: ~22s</p>
-    </div>
 
     <section id="impact" class="section">
       <div class="container impact-grid">
@@ -458,6 +265,7 @@
         <div class="field-group">
           <label for="loginRole">Clearance Level</label>
           <select id="loginRole" class="form-input">
+            <option value="hq">National HQ Operator</option>
             <option value="warehouse">Warehouse Manager</option>
             <option value="driver">Fleet Driver</option>
           </select>
@@ -486,7 +294,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="data/route-snapshots.js"></script>
   <script src="map.js"></script>
-  <script src="flood-demo.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

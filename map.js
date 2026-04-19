@@ -82,6 +82,10 @@ const ROUTE_PROVIDERS = [
 ];
 
 let _realRoutesPromise = null;
+const _routeMetrics = {
+  main: null,
+  bypass: null,
+};
 const _routeStatus = {
   initialized: false,
   usingRealMain: false,
@@ -103,6 +107,39 @@ function _routePoint(route, ratio = 0.4) {
   return route[i];
 }
 
+function _routeLengthKm(route) {
+  if (!Array.isArray(route) || route.length < 2) return 0;
+
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+  let total = 0;
+
+  for (let i = 1; i < route.length; i++) {
+    const [lat1, lng1] = route[i - 1];
+    const [lat2, lng2] = route[i];
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    total += 2 * earthRadiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  return total;
+}
+
+function _estimateRouteMetrics(route) {
+  const distanceKm = _routeLengthKm(route);
+  if (!distanceKm) {
+    return { distanceKm: 0, durationMin: 0, avgSpeedKph: 0 };
+  }
+
+  const avgSpeedKph = 42;
+  return {
+    distanceKm: Number(distanceKm.toFixed(1)),
+    durationMin: Number(((distanceKm / avgSpeedKph) * 60).toFixed(0)),
+    avgSpeedKph,
+  };
+}
+
 async function _fetchOsrmRouteFromBase(baseUrl, waypoints) {
   if (!Array.isArray(waypoints) || waypoints.length < 2) return null;
 
@@ -113,9 +150,15 @@ async function _fetchOsrmRouteFromBase(baseUrl, waypoints) {
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
+    const route = data?.routes?.[0] || null;
     const points = data?.routes?.[0]?.geometry?.coordinates;
     if (!Array.isArray(points) || points.length < 2) return null;
-    return points.map(([lng, lat]) => [lat, lng]);
+    return {
+      route: points.map(([lng, lat]) => [lat, lng]),
+      distanceKm: Number(((route?.distance || 0) / 1000).toFixed(1)),
+      durationMin: Number(((route?.duration || 0) / 60).toFixed(0)),
+      providerDetail: "route-v1",
+    };
   } catch (_) {
     return null;
   }
@@ -130,8 +173,8 @@ async function _fetchBestRoute(waypoints) {
       route = await _fetchOsrmRouteFromBase(provider.baseUrl, waypoints);
     }
 
-    if (route?.length) {
-      return { route, provider: provider.name };
+    if (route?.route?.length) {
+      return { ...route, provider: provider.name };
     }
   }
 
@@ -158,9 +201,15 @@ async function _fetchOrsRoute(waypoints) {
 
     if (!res.ok) return null;
     const data = await res.json();
+    const route = data?.features?.[0] || null;
     const points = data?.features?.[0]?.geometry?.coordinates;
     if (!Array.isArray(points) || points.length < 2) return null;
-    return points.map(([lng, lat]) => [lat, lng]);
+    return {
+      route: points.map(([lng, lat]) => [lat, lng]),
+      distanceKm: Number(((route?.properties?.summary?.distance || 0) / 1000).toFixed(1)),
+      durationMin: Number(((route?.properties?.summary?.duration || 0) / 60).toFixed(0)),
+      providerDetail: "geojson",
+    };
   } catch (_) {
     return null;
   }
@@ -181,6 +230,8 @@ async function loadRealRoutes() {
       ? (ROUTE_SNAPSHOT?.source || "Local Snapshot")
       : "Fallback";
     _routeStatus.error = null;
+    _routeMetrics.main = _estimateRouteMetrics(ROUTE_MAIN);
+    _routeMetrics.bypass = _estimateRouteMetrics(ROUTE_BYPASS);
 
     _realRoutesPromise = Promise.resolve({
       main: ROUTE_MAIN,
@@ -216,8 +267,22 @@ async function loadRealRoutes() {
     const realMain = mainResult.route;
     const realBypass = bypassResult.route;
 
-    if (realMain?.length) ROUTE_MAIN = realMain;
-    if (realBypass?.length) ROUTE_BYPASS = realBypass;
+    if (realMain?.length) {
+      ROUTE_MAIN = realMain;
+      _routeMetrics.main = {
+        distanceKm: mainResult.distanceKm || _estimateRouteMetrics(realMain).distanceKm,
+        durationMin: mainResult.durationMin || _estimateRouteMetrics(realMain).durationMin,
+        avgSpeedKph: _estimateRouteMetrics(realMain).avgSpeedKph,
+      };
+    }
+    if (realBypass?.length) {
+      ROUTE_BYPASS = realBypass;
+      _routeMetrics.bypass = {
+        distanceKm: bypassResult.distanceKm || _estimateRouteMetrics(realBypass).distanceKm,
+        durationMin: bypassResult.durationMin || _estimateRouteMetrics(realBypass).durationMin,
+        avgSpeedKph: _estimateRouteMetrics(realBypass).avgSpeedKph,
+      };
+    }
 
     _routeStatus.initialized = true;
     _routeStatus.usingRealMain = Boolean(realMain?.length);
@@ -227,6 +292,9 @@ async function loadRealRoutes() {
     _routeStatus.error = _routeStatus.usingRealMain || _routeStatus.usingRealBypass
       ? null
       : "Routing API unavailable. Using fallback coordinates.";
+
+    if (!_routeMetrics.main) _routeMetrics.main = _estimateRouteMetrics(ROUTE_MAIN);
+    if (!_routeMetrics.bypass) _routeMetrics.bypass = _estimateRouteMetrics(ROUTE_BYPASS);
 
     return {
       main: ROUTE_MAIN,
@@ -243,6 +311,8 @@ async function loadRealRoutes() {
     _routeStatus.providerMain = "Fallback";
     _routeStatus.providerBypass = "Fallback";
     _routeStatus.error = err?.message || "Failed to load routing data";
+    _routeMetrics.main = _estimateRouteMetrics(ROUTE_MAIN);
+    _routeMetrics.bypass = _estimateRouteMetrics(ROUTE_BYPASS);
 
     return {
       main: ROUTE_MAIN,
@@ -269,6 +339,8 @@ function getRouteStatus() {
     providerChain: ROUTE_PROVIDERS.map((p) => p.name),
     mainPoints: ROUTE_MAIN.length,
     bypassPoints: ROUTE_BYPASS.length,
+    mainMetrics: _routeMetrics.main,
+    bypassMetrics: _routeMetrics.bypass,
   };
 }
 

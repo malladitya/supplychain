@@ -91,6 +91,20 @@
       padding-top: 1.5rem;
     }
 
+    .live-status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .live-status-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 1rem;
+    }
+
     .btn-driver { font-size: 1.1rem; padding: 1rem; }
     .btn-alert  { background: linear-gradient(120deg, #ff6b6b, #c92a2a); color: #fff; }
 
@@ -176,6 +190,24 @@
       <p style="color: var(--ok); font-weight: 700;" id="driverState">Stable &amp; Green</p>
     </div>
 
+    <div class="live-status-grid">
+      <div class="live-status-card">
+        <p class="eyebrow">HQ Sync</p>
+        <p class="stat-val" style="font-size:1.6rem; margin:0.35rem 0;" id="hqDriverState">Listening</p>
+        <p id="hqDriverDetail" style="color:var(--muted); font-size:0.9rem;">Awaiting HQ scenario updates</p>
+      </div>
+      <div class="live-status-card">
+        <p class="eyebrow">Route Status</p>
+        <p class="stat-val" style="font-size:1.6rem; margin:0.35rem 0;" id="driverRouteState">Loading</p>
+        <p id="driverRouteDetail" style="color:var(--muted); font-size:0.9rem;">Route provider health and live road geometry</p>
+      </div>
+      <div class="live-status-card">
+        <p class="eyebrow">System Heartbeat</p>
+        <p class="stat-val" style="font-size:1.6rem; margin:0.35rem 0;" id="driverHeartbeatState">Syncing</p>
+        <p id="driverHeartbeatDetail" style="color:var(--muted); font-size:0.9rem;">Awaiting global state</p>
+      </div>
+    </div>
+
     <!-- Reroute alert banner -->
     <div id="rerouteAlert">
       <h3 style="color: var(--warn); margin-bottom: 0.5rem;">⚠️ Chaos Spike Detected!</h3>
@@ -191,6 +223,11 @@
 
     <!-- Live Route Map -->
     <div id="driverMap" style="height:260px; border-radius:16px; overflow:hidden; margin-bottom:1.5rem; background:#0d1f2d;"></div>
+
+    <div class="route-card">
+      <h3 style="margin-bottom: 0.75rem;">Live Driver Signals</h3>
+      <ul id="driverSignals" style="list-style:none; padding:0; margin:0; color:var(--muted); line-height:1.8;"></ul>
+    </div>
 
     <div class="route-card" id="routeCard">
       <h3 style="margin-bottom: 1rem;">Active Manifest: Medical Supplies</h3>
@@ -231,14 +268,106 @@
     // ── DOM refs ──────────────────────────────────────────
     const driverScoreEl    = document.getElementById('driverScore');
     const driverStateEl    = document.getElementById('driverState');
+    const hqDriverState    = document.getElementById('hqDriverState');
+    const hqDriverDetail   = document.getElementById('hqDriverDetail');
+    const driverRouteState = document.getElementById('driverRouteState');
+    const driverRouteDetail= document.getElementById('driverRouteDetail');
+    const driverHeartbeatState = document.getElementById('driverHeartbeatState');
+    const driverHeartbeatDetail= document.getElementById('driverHeartbeatDetail');
+    const driverSignals    = document.getElementById('driverSignals');
     const rerouteAlert     = document.getElementById('rerouteAlert');
     const reportBtn        = document.getElementById('reportCongestionBtn');
     const acceptRouteBtn   = document.getElementById('acceptRouteBtn');
     const checkpointStep   = document.getElementById('checkpointStep');
     let score = 24;
 
+    function addDriverSignal(label, detail, tone = 'var(--muted)') {
+      if (!driverSignals) return;
+      const item = document.createElement('li');
+      item.innerHTML = `<strong style="color:${tone}">${label}</strong> <span style="color:var(--muted)">${detail}</span>`;
+      driverSignals.prepend(item);
+      while (driverSignals.children.length > 6) {
+        driverSignals.removeChild(driverSignals.lastChild);
+      }
+    }
+
+    function refreshDriverRouteStatus() {
+      if (typeof getRouteStatus !== 'function') return;
+      const status = getRouteStatus();
+      if (!driverRouteState || !driverRouteDetail) return;
+
+      if (status.usingRealMain || status.usingRealBypass) {
+        driverRouteState.textContent = 'Live';
+        driverRouteState.style.color = 'var(--ok)';
+      } else if (status.initialized) {
+        driverRouteState.textContent = 'Fallback';
+        driverRouteState.style.color = 'var(--warn)';
+      } else {
+        driverRouteState.textContent = 'Loading';
+        driverRouteState.style.color = 'var(--warn)';
+      }
+
+      const mainMetrics = status.mainMetrics || {};
+      driverRouteDetail.textContent = `${status.providerMain} · ${mainMetrics.distanceKm || 0} km / ${mainMetrics.durationMin || 0} min`;
+    }
+
+    function setHqDriverSync(title, detail, tone = 'var(--ok)') {
+      if (hqDriverState) {
+        hqDriverState.textContent = title;
+        hqDriverState.style.color = tone;
+      }
+      if (hqDriverDetail) {
+        hqDriverDetail.textContent = detail;
+      }
+    }
+
+    function setHeartbeat(title, detail, tone = 'var(--ok)') {
+      if (driverHeartbeatState) {
+        driverHeartbeatState.textContent = title;
+        driverHeartbeatState.style.color = tone;
+      }
+      if (driverHeartbeatDetail) {
+        driverHeartbeatDetail.textContent = detail;
+      }
+    }
+
     // ── Init map after page loads ────────────────────────
     document.addEventListener('DOMContentLoaded', () => initDriverMap());
+
+    refreshDriverRouteStatus();
+
+    if (typeof onMapEvent === 'function' && typeof EVT !== 'undefined') {
+      onMapEvent(EVT.SYSTEM_HEARTBEAT, ({ tone, detail }) => {
+        setHeartbeat(tone || 'Syncing', detail || 'Awaiting global state', tone === 'Critical' ? 'var(--risk)' : tone === 'Watch' ? 'var(--warn)' : 'var(--ok)');
+        addDriverSignal('Heartbeat', detail || 'Global state refreshed', tone === 'Critical' ? 'var(--risk)' : tone === 'Watch' ? 'var(--warn)' : 'var(--ok)');
+      });
+
+      onMapEvent(EVT.HQ_SCENARIO_CHANGED, ({ chaosScore, region, event, emergency }) => {
+        refreshDriverRouteStatus();
+        setHqDriverSync(
+          chaosScore > 75 ? 'Critical' : chaosScore > 55 ? 'Watch' : 'Normal',
+          `HQ scenario: ${region} · ${event} · ${emergency ? 'Emergency mode' : 'Standard mode'}`,
+          chaosScore > 75 ? 'var(--risk)' : chaosScore > 55 ? 'var(--warn)' : 'var(--ok)'
+        );
+        addDriverSignal('HQ update', `Chaos score ${chaosScore}`, chaosScore > 75 ? 'var(--risk)' : 'var(--warn)');
+      });
+
+      onMapEvent(EVT.WH_TRANSFER_APPROVED, ({ from, to }) => {
+        setHqDriverSync('Warehouse transfer', `${from} → ${to} approved and in motion`, 'var(--ok)');
+        addDriverSignal('Warehouse transfer', `${from} → ${to}`, 'var(--ok)');
+      });
+
+      onMapEvent(EVT.DRIVER_REROUTED, () => {
+        setHqDriverSync('Bypass active', 'Fleet is already on the safer route', 'var(--ok)');
+        addDriverSignal('Reroute complete', 'Bypass route activated', 'var(--ok)');
+        refreshDriverRouteStatus();
+      });
+
+      onMapEvent(EVT.DRIVER_DELIVERED, ({ unit, location }) => {
+        setHqDriverSync('Delivered', `${unit} reached ${location}`, 'var(--ok)');
+        addDriverSignal('Delivery confirmed', `${unit} reached ${location}`, 'var(--ok)');
+      });
+    }
 
     // ── Report Congestion ────────────────────────────────
     reportBtn.addEventListener('click', () => {
@@ -256,12 +385,14 @@
 
       // Show reroute banner after short delay
       setTimeout(() => { rerouteAlert.style.display = 'block'; }, 600);
+      addDriverSignal('Local congestion', 'Escalated to HQ and map engine', 'var(--risk)');
     });
 
     // ── Manual "Accept Reroute" ──────────────────────────
     acceptRouteBtn.addEventListener('click', () => {
       if (typeof triggerRerouteOnMap === 'function') triggerRerouteOnMap();
       _applyRerouteUI();
+      addDriverSignal('Manual reroute', 'Driver accepted safer bypass', 'var(--ok)');
     });
 
     // ── Auto-reroute fired by map.js countdown ───────────
@@ -295,6 +426,7 @@
       btn.textContent = '✅ Delivered!';
       btn.disabled = true;
       emitMapEvent(EVT.DRIVER_DELIVERED, { unit: '#710', location: 'Lucknow City Hospital' });
+      addDriverSignal('Delivery sent', 'Broadcast to HQ and warehouse', 'var(--ok)');
     });
   </script>
 </body>

@@ -32,9 +32,16 @@ const outputs = {
   policyCompare: document.getElementById("policyCompare"),
   policyList: document.getElementById("policyList"),
   integrationList: document.getElementById("integrationList"),
+  liveSignalsList: document.getElementById("liveSignalsList"),
+  liveTransitList: document.getElementById("liveTransitList"),
+  liveWeatherList: document.getElementById("liveWeatherList"),
   historyList: document.getElementById("historyList"),
   liveMap: document.getElementById("liveMap"),
   routeDataStatus: document.getElementById("routeDataStatus"),
+  analysisStatus: document.getElementById("analysisStatus"),
+  analysisDetail: document.getElementById("analysisDetail"),
+  heartbeatStatus: document.getElementById("heartbeatStatus"),
+  heartbeatDetail: document.getElementById("heartbeatDetail"),
 };
 
 const regions = [
@@ -189,6 +196,29 @@ const scenario = {
 
 let lessons = loadLessons();
 let healingTimer = null;
+let analysisTimer = null;
+let weatherTimer = null;
+const analysisIntervalMs = 15000;
+const weatherRefreshIntervalMs = 10 * 60 * 1000;
+const liveOps = {
+  congestion: 0,
+  warehouseTransfer: 0,
+  deliveryProgress: 0,
+  rerouteActive: false,
+  lastEvent: "Awaiting field updates",
+  signals: [],
+};
+const liveWeather = {
+  byRegion: {},
+  lastUpdated: null,
+  status: "Loading external weather feed",
+};
+const liveGeo = {
+  north: { label: "North Hub", lat: 28.6139, lng: 77.2090 },
+  central: { label: "Central Corridor", lat: 23.2599, lng: 77.4126 },
+  south: { label: "South Arc", lat: 12.9716, lng: 77.5946 },
+  coastal: { label: "Coastal Belt", lat: 19.0760, lng: 72.8777 },
+};
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -243,12 +273,198 @@ function getLearningDiscount(eventId) {
   return clamp(matchingRuns * 1.2, 0, 8);
 }
 
+function buildSystemHeartbeat(primaryRegion, routeStatus, weatherFeed) {
+  const routeLive = Boolean(routeStatus?.usingRealMain || routeStatus?.usingRealBypass);
+  const weatherLive = Boolean(weatherFeed?.lastUpdated);
+  const score = primaryRegion?.score ?? 0;
+  const tone = score >= 80 ? "Critical" : score >= 60 ? "Watch" : "Nominal";
+  const detailParts = [
+    `${primaryRegion?.label || "Unknown region"}: ${score}`,
+    routeLive ? "route live" : "route fallback",
+    weatherLive ? `weather ${weatherFeed.lastUpdated}` : "weather pending",
+  ];
+
+  return {
+    tone,
+    detail: detailParts.join(" · "),
+    score,
+    routeLive,
+    weatherLive,
+  };
+}
+
+function weatherCodeToLabel(code) {
+  const weatherMap = {
+    0: "Clear",
+    1: "Mostly clear",
+    2: "Partly cloudy",
+    3: "Cloudy",
+    45: "Fog",
+    48: "Rime fog",
+    51: "Light drizzle",
+    53: "Drizzle",
+    55: "Heavy drizzle",
+    56: "Freezing drizzle",
+    57: "Dense freezing drizzle",
+    61: "Light rain",
+    63: "Rain",
+    65: "Heavy rain",
+    66: "Freezing rain",
+    67: "Heavy freezing rain",
+    71: "Light snow",
+    73: "Snow",
+    75: "Heavy snow",
+    80: "Rain showers",
+    81: "Moderate showers",
+    82: "Violent showers",
+    95: "Thunderstorm",
+    96: "Thunderstorm with hail",
+    99: "Severe thunderstorm",
+  };
+
+  return weatherMap[code] || `Weather code ${code}`;
+}
+
+function weatherCodePressure(code) {
+  if ([0].includes(code)) return 0;
+  if ([1, 2, 3].includes(code)) return 4;
+  if ([45, 48].includes(code)) return 8;
+  if ([51, 53, 55].includes(code)) return 11;
+  if ([56, 57].includes(code)) return 14;
+  if ([61, 63, 65].includes(code)) return 17;
+  if ([66, 67].includes(code)) return 21;
+  if ([71, 73, 75].includes(code)) return 19;
+  if ([80, 81, 82].includes(code)) return 18;
+  if ([95, 96, 99].includes(code)) return 24;
+  return 7;
+}
+
+function computeRoutePressure(status) {
+  if (!status || !status.initialized) {
+    return 6;
+  }
+
+  const mainMetrics = status.mainMetrics || {};
+  const bypassMetrics = status.bypassMetrics || {};
+
+  if (mainMetrics.distanceKm > 0 && mainMetrics.durationMin > 0) {
+    const mainMinutesPerKm = mainMetrics.durationMin / mainMetrics.distanceKm;
+    const bypassMinutesPerKm = bypassMetrics.distanceKm > 0 && bypassMetrics.durationMin > 0
+      ? bypassMetrics.durationMin / bypassMetrics.distanceKm
+      : mainMinutesPerKm;
+    const routeGap = Math.max(0, mainMinutesPerKm - bypassMinutesPerKm);
+    return clamp(Math.round(routeGap * 8 + (status.usingRealMain || status.usingRealBypass ? 1 : 4)), 0, 20);
+  }
+
+  if (status.usingRealMain || status.usingRealBypass) {
+    return 1;
+  }
+
+  return status.hasApiKey ? 3 : 8;
+}
+
+async function refreshLiveWeatherFeed() {
+  const regions = Object.entries(liveGeo);
+  const results = await Promise.allSettled(
+    regions.map(async ([id, region]) => {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${region.lat}&longitude=${region.lng}&current=temperature_2m,precipitation,wind_speed_10m,weather_code&timezone=auto`;
+      const response = await fetch(url, { method: "GET" });
+      if (!response.ok) {
+        throw new Error(`Weather request failed for ${region.label}`);
+      }
+
+      const payload = await response.json();
+      const current = payload?.current || {};
+      const code = Number(current.weather_code ?? 0);
+      const pressure = clamp(
+        Math.round(
+          weatherCodePressure(code) +
+          Number(current.precipitation ?? 0) * 2 +
+          Number(current.wind_speed_10m ?? 0) / 8
+        ),
+        0,
+        30
+      );
+
+      return {
+        id,
+        label: region.label,
+        temperature: Number(current.temperature_2m ?? 0),
+        precipitation: Number(current.precipitation ?? 0),
+        wind: Number(current.wind_speed_10m ?? 0),
+        code,
+        summary: weatherCodeToLabel(code),
+        pressure,
+        updatedAt: new Date().toLocaleTimeString(),
+      };
+    })
+  );
+
+  results.forEach((result, index) => {
+    const regionId = regions[index][0];
+    if (result.status === "fulfilled") {
+      liveWeather.byRegion[regionId] = result.value;
+    }
+  });
+
+  liveWeather.lastUpdated = new Date().toLocaleTimeString();
+  liveWeather.status = "External weather feed active";
+  render();
+}
+
+function pushLiveSignal(label, value) {
+  liveOps.lastEvent = label;
+  liveOps.signals = [
+    { label, value, timestamp: new Date().toLocaleTimeString() },
+    ...liveOps.signals,
+  ].slice(0, 6);
+}
+
+function getLiveOpsPressure() {
+  const congestionPressure = liveOps.congestion * 0.16;
+  const reroutePressure = liveOps.rerouteActive ? -5 : 0;
+  const transferRelief = liveOps.warehouseTransfer > 0 ? -4 : 0;
+  const deliveryRelief = liveOps.deliveryProgress > 0 ? -3 : 0;
+  return clamp(Math.round(congestionPressure + reroutePressure + transferRelief + deliveryRelief), -12, 18);
+}
+
+function syncSignalStateFromEvent(eventType, payload = {}) {
+  if (eventType === EVT.DRIVER_CONGESTION) {
+    liveOps.congestion = 92;
+    liveOps.rerouteActive = true;
+    pushLiveSignal("Driver reported congestion", `Route pressure near ${payload.lat?.toFixed?.(2) || "field"}, ${payload.lng?.toFixed?.(2) || "node"}`);
+  }
+
+  if (eventType === EVT.DRIVER_REROUTED) {
+    liveOps.congestion = 38;
+    liveOps.rerouteActive = false;
+    pushLiveSignal("Driver rerouted", "Bypass route active and congestion reduced");
+  }
+
+  if (eventType === EVT.WH_TRANSFER_APPROVED) {
+    liveOps.warehouseTransfer = 1;
+    scenario.integration = clamp(scenario.integration + 8, 0, 100);
+    pushLiveSignal("Warehouse transfer approved", `${payload.from || "source"} → ${payload.to || "destination"}`);
+  }
+
+  if (eventType === EVT.DRIVER_DELIVERED) {
+    liveOps.deliveryProgress = 1;
+    scenario.demand = clamp(scenario.demand - 7, 0, 100);
+    pushLiveSignal("Delivery confirmed", `${payload.unit || "Fleet unit"} completed drop-off`);
+  }
+}
+
 function computeRegionView(region) {
   const eventProfile = getEventProfile(scenario.event);
   const learningDiscount = getLearningDiscount(scenario.event);
   const offlinePenalty = scenario.offline ? 0.12 : 0;
   const emergencyBonus = scenario.emergency ? 10 : 0;
   const policyProfile = getPolicyProfile(scenario.policy);
+  const livePressure = getLiveOpsPressure();
+  const weatherInfo = liveWeather.byRegion[region.id];
+  const liveWeatherPressure = weatherInfo ? weatherInfo.pressure : 0;
+  const routePressure = computeRoutePressure(typeof getRouteStatus === "function" ? getRouteStatus() : null);
+  const weatherSignal = clamp(Math.round((scenario.weather * 0.55) + (liveWeatherPressure * 0.45)), 0, 100);
 
   const adjustedSupply = region.baseSupply * (1 - offlinePenalty);
   const adjustedDemand = region.baseDemand * (1 + scenario.demand / 180) + eventProfile.bias;
@@ -256,11 +472,13 @@ function computeRegionView(region) {
 
   const regionalRisk =
     15 +
-    scenario.weather * (0.22 * region.weatherSensitivity) +
+    weatherSignal * (0.22 * region.weatherSensitivity) +
     scenario.traffic * (0.21 * region.trafficSensitivity) +
     scenario.demand * 0.18 +
     eventProfile.risk +
     emergencyBonus +
+    livePressure +
+    routePressure +
     (scenario.offline ? 8 : 0) -
     scenario.integration * 0.17 +
     region.riskBias +
@@ -335,8 +553,8 @@ function buildExplainability(regionView) {
   const factors = [
     {
       label: "Weather pressure",
-      value: scenario.weather,
-      impact: Math.round(scenario.weather * 0.22 * regionView.weatherSensitivity),
+      value: `${scenario.weather} manual / ${liveWeather.byRegion[regionView.id]?.pressure ?? 0} live`,
+      impact: Math.round((scenario.weather * 0.22 * 0.55 + (liveWeather.byRegion[regionView.id]?.pressure ?? 0) * 0.22 * 0.45) * regionView.weatherSensitivity),
     },
     {
       label: "Traffic congestion",
@@ -657,6 +875,33 @@ function render() {
   renderList(outputs.forecastList, forecast.items);
   renderList(outputs.policyList, policyAssessment.items);
   renderList(outputs.integrationList, integrationStatus);
+  renderList(outputs.liveSignalsList, liveOps.signals.length ? liveOps.signals.map((signal) => `${signal.timestamp} · ${signal.label} — ${signal.value}`) : ["No live field signals yet. Waiting for driver or warehouse events."]);
+  renderList(outputs.liveTransitList, (() => {
+    const status = typeof getRouteStatus === "function" ? getRouteStatus() : null;
+    if (!status) {
+      return ["Route intelligence unavailable."];
+    }
+
+    const mainMetrics = status.mainMetrics || {};
+    const bypassMetrics = status.bypassMetrics || {};
+
+    return [
+      `Provider: ${status.providerMain} / ${status.providerBypass}`,
+      `Main route: ${mainMetrics.distanceKm || 0} km / ${mainMetrics.durationMin || 0} min`,
+      `Bypass route: ${bypassMetrics.distanceKm || 0} km / ${bypassMetrics.durationMin || 0} min`,
+      `Live traffic pressure: ${computeRoutePressure(status)}/20`,
+      `Real road geometry: ${status.usingRealMain || status.usingRealBypass ? "Yes" : "Fallback"}`,
+      `Route status: ${status.error ? status.error : "Nominal"}`,
+    ];
+  })());
+  renderList(outputs.liveWeatherList, (() => {
+    const entries = Object.values(liveWeather.byRegion);
+    if (!entries.length) {
+      return ["Weather feed loading or unavailable."];
+    }
+
+    return entries.map((entry) => `${entry.label}: ${entry.summary}, ${entry.temperature}°C, wind ${entry.wind} km/h, pressure ${entry.pressure}/30`);
+  })());
   renderList(outputs.historyList, historyItems);
   renderRegionGrid(regionViews);
 
@@ -792,6 +1037,31 @@ function render() {
   if (outputs.policyCompare) {
     outputs.policyCompare.textContent = `${policyAssessment.compare} Event overlay: ${eventProfile.label}.`;
   }
+
+  const routeStatus = typeof getRouteStatus === "function" ? getRouteStatus() : null;
+  const heartbeat = buildSystemHeartbeat(primaryRegion, routeStatus, liveWeather);
+
+  if (outputs.heartbeatStatus) {
+    outputs.heartbeatStatus.textContent = heartbeat.tone;
+    outputs.heartbeatStatus.style.color =
+      heartbeat.tone === "Critical" ? "var(--risk)" : heartbeat.tone === "Watch" ? "var(--warn)" : "var(--ok)";
+  }
+
+  if (outputs.heartbeatDetail) {
+    outputs.heartbeatDetail.textContent = heartbeat.detail;
+  }
+
+  if (typeof emitMapEvent === "function" && typeof EVT !== "undefined") {
+    emitMapEvent(EVT.SYSTEM_HEARTBEAT, {
+      tone: heartbeat.tone,
+      detail: heartbeat.detail,
+      score: heartbeat.score,
+      routeLive: heartbeat.routeLive,
+      weatherLive: heartbeat.weatherLive,
+      region: primaryRegion.label,
+    });
+  }
+
 }
 
 function syncFromControls() {
@@ -840,6 +1110,67 @@ function activateHealing() {
     scenario.healingBoost = 0;
     render();
   }, 3500);
+}
+
+function updateAnalysisCycleStatus(text, detail) {
+  if (outputs.analysisStatus) {
+    outputs.analysisStatus.textContent = text;
+  }
+
+  if (outputs.analysisDetail) {
+    outputs.analysisDetail.textContent = detail;
+  }
+}
+
+function runAnalysisCycle(source = "scheduled") {
+  syncFromControls();
+
+  const primaryRegion = computeRegionView(getRegion(scenario.region));
+  const cycleTime = new Date().toLocaleTimeString();
+
+  if (primaryRegion.score >= SelfHealingEngine.THRESHOLD && scenario.healingBoost <= 0) {
+    updateAnalysisCycleStatus("Preemptive reroute", `${cycleTime} · ${source} cycle detected elevated risk`);
+    activateHealing();
+    return;
+  }
+
+  if (primaryRegion.score >= 80) {
+    updateAnalysisCycleStatus("Critical watch", `${cycleTime} · monitoring active, human review recommended`);
+  } else if (primaryRegion.score >= 65) {
+    updateAnalysisCycleStatus("Warning watch", `${cycleTime} · risk elevated, routes are being recalculated`);
+  } else {
+    updateAnalysisCycleStatus("Watching", `${cycleTime} · continuous preemptive monitoring active`);
+  }
+
+  render();
+}
+
+function startAnalysisMonitoring() {
+  if (analysisTimer) {
+    window.clearInterval(analysisTimer);
+  }
+
+  analysisTimer = window.setInterval(() => {
+    runAnalysisCycle("scheduled");
+  }, analysisIntervalMs);
+}
+
+function startWeatherMonitoring() {
+  if (weatherTimer) {
+    window.clearInterval(weatherTimer);
+  }
+
+  refreshLiveWeatherFeed().catch((error) => {
+    liveWeather.status = `Weather feed unavailable: ${error.message}`;
+    render();
+  });
+
+  weatherTimer = window.setInterval(() => {
+    refreshLiveWeatherFeed().catch((error) => {
+      liveWeather.status = `Weather feed unavailable: ${error.message}`;
+      render();
+    });
+  }, weatherRefreshIntervalMs);
 }
 
 function wireControls() {
@@ -895,6 +1226,28 @@ function wireControls() {
     if (controls.emergencyToggle) controls.emergencyToggle.checked = scenario.emergency;
     if (controls.offlineToggle) controls.offlineToggle.checked = scenario.offline;
   });
+
+  if (typeof onMapEvent === 'function' && typeof EVT !== 'undefined') {
+    onMapEvent(EVT.DRIVER_CONGESTION, (payload) => {
+      syncSignalStateFromEvent(EVT.DRIVER_CONGESTION, payload);
+      runAnalysisCycle("driver-congestion");
+    });
+
+    onMapEvent(EVT.DRIVER_REROUTED, (payload) => {
+      syncSignalStateFromEvent(EVT.DRIVER_REROUTED, payload);
+      runAnalysisCycle("driver-rerouted");
+    });
+
+    onMapEvent(EVT.WH_TRANSFER_APPROVED, (payload) => {
+      syncSignalStateFromEvent(EVT.WH_TRANSFER_APPROVED, payload);
+      runAnalysisCycle("warehouse-transfer");
+    });
+
+    onMapEvent(EVT.DRIVER_DELIVERED, (payload) => {
+      syncSignalStateFromEvent(EVT.DRIVER_DELIVERED, payload);
+      runAnalysisCycle("driver-delivered");
+    });
+  }
 
   controls.runScenarioBtn?.addEventListener("click", () => {
     const btn = controls.runScenarioBtn;
@@ -954,6 +1307,7 @@ revealItems.forEach((item, index) => {
 
 // Login Modal Logic
 const openLoginBtn = document.getElementById("openLoginBtn");
+const openLoginBtnSecondary = document.getElementById("openLoginBtnSecondary");
 const closeLoginBtn = document.getElementById("closeLoginBtn");
 const loginModal = document.getElementById("loginModal");
 const loginSubmitBtn = document.getElementById("loginSubmitBtn");
@@ -964,6 +1318,13 @@ const loginError = document.getElementById("loginError");
 
 if (openLoginBtn && loginModal) {
   openLoginBtn.addEventListener("click", () => {
+    loginModal.classList.add("active");
+    if(loginError) loginError.style.display = "none";
+  });
+}
+
+if (openLoginBtnSecondary && loginModal) {
+  openLoginBtnSecondary.addEventListener("click", () => {
     loginModal.classList.add("active");
     if(loginError) loginError.style.display = "none";
   });
@@ -1020,7 +1381,9 @@ if (loginSubmitBtn) {
         time: new Date().toISOString()
       }));
 
-      if (selectedRole === "warehouse") {
+      if (selectedRole === "hq") {
+        window.location.href = "hq.html";
+      } else if (selectedRole === "warehouse") {
         window.location.href = "warehouse.html";
       } else {
         window.location.href = "driver.html";
@@ -1031,6 +1394,8 @@ if (loginSubmitBtn) {
 
 initializeControls();
 wireControls();
+startAnalysisMonitoring();
+startWeatherMonitoring();
 
 // Initialize map first so the first render paints actual live layers, not fallback tiles.
 if (typeof initNationalMap === 'function') initNationalMap();
@@ -1039,6 +1404,7 @@ if (typeof loadRealRoutes === 'function') {
   loadRealRoutes().finally(() => {
     updateRouteDataStatus();
     render();
+    runAnalysisCycle("initial");
   });
 }
 

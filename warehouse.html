@@ -89,6 +89,18 @@
       background: var(--accent);
       width: 76%;
     }
+    .live-status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .live-status-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -143,6 +155,24 @@
         </div>
       </div>
 
+      <div class="live-status-grid">
+        <div class="live-status-card">
+          <p class="eyebrow">HQ Sync</p>
+          <p class="stat-val" style="font-size:1.6rem; margin:0.35rem 0;" id="hqSyncState">Listening</p>
+          <p id="hqSyncDetail" style="color:var(--muted); font-size:0.9rem;">Waiting for scenario updates</p>
+        </div>
+        <div class="live-status-card">
+          <p class="eyebrow">Route Status</p>
+          <p class="stat-val" style="font-size:1.6rem; margin:0.35rem 0;" id="routeSyncState">Loading</p>
+          <p id="routeSyncDetail" style="color:var(--muted); font-size:0.9rem;">Route provider health and travel time</p>
+        </div>
+        <div class="live-status-card">
+          <p class="eyebrow">System Heartbeat</p>
+          <p class="stat-val" style="font-size:1.6rem; margin:0.35rem 0;" id="warehouseHeartbeatState">Syncing</p>
+          <p id="warehouseHeartbeatDetail" style="color:var(--muted); font-size:0.9rem;">Awaiting global state</p>
+        </div>
+      </div>
+
       <!-- Supply Network Map -->
       <div style="margin-bottom: 2rem;">
         <h3 style="font-size:1rem; margin-bottom:0.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">Supply Network Map</h3>
@@ -170,6 +200,14 @@
         <button class="btn approve-btn" id="approveTransferBtn">Approve Transfer</button>
         <span id="transferFeedback" style="margin-left: 1rem; color: var(--ok); display: none; font-weight: bold;">Transfer Approved. Fleet is executing.</span>
       </div>
+
+      <div class="ai-panel" style="margin-top: 1.5rem;">
+        <h2 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span class="brand-dot" style="animation: none;"></span>
+          Live Warehouse Signals
+        </h2>
+        <ul id="warehouseSignals" style="list-style:none; padding:0; margin:0; color:var(--muted); line-height:1.8;"></ul>
+      </div>
     </main>
   </div>
 
@@ -182,6 +220,106 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       initWarehouseMap();
+
+      const hqSyncState = document.getElementById('hqSyncState');
+      const hqSyncDetail = document.getElementById('hqSyncDetail');
+      const routeSyncState = document.getElementById('routeSyncState');
+      const routeSyncDetail = document.getElementById('routeSyncDetail');
+      const warehouseHeartbeatState = document.getElementById('warehouseHeartbeatState');
+      const warehouseHeartbeatDetail = document.getElementById('warehouseHeartbeatDetail');
+      const warehouseSignals = document.getElementById('warehouseSignals');
+
+      function addSignal(label, detail, tone = 'var(--muted)') {
+        if (!warehouseSignals) return;
+        const item = document.createElement('li');
+        item.innerHTML = `<strong style="color:${tone}">${label}</strong> <span style="color:var(--muted)">${detail}</span>`;
+        warehouseSignals.prepend(item);
+        while (warehouseSignals.children.length > 6) {
+          warehouseSignals.removeChild(warehouseSignals.lastChild);
+        }
+      }
+
+      function refreshRouteStatus() {
+        if (typeof getRouteStatus !== 'function') return;
+        const status = getRouteStatus();
+        if (!routeSyncState || !routeSyncDetail) return;
+
+        if (status.usingRealMain || status.usingRealBypass) {
+          routeSyncState.textContent = 'Live';
+          routeSyncState.style.color = 'var(--ok)';
+        } else if (status.initialized) {
+          routeSyncState.textContent = 'Fallback';
+          routeSyncState.style.color = 'var(--warn)';
+        } else {
+          routeSyncState.textContent = 'Loading';
+          routeSyncState.style.color = 'var(--warn)';
+        }
+
+        const mainMetrics = status.mainMetrics || {};
+        routeSyncDetail.textContent = `${status.providerMain} · ${mainMetrics.distanceKm || 0} km / ${mainMetrics.durationMin || 0} min`;
+      }
+
+      function setHqState(title, detail, tone = 'var(--ok)') {
+        if (hqSyncState) {
+          hqSyncState.textContent = title;
+          hqSyncState.style.color = tone;
+        }
+        if (hqSyncDetail) {
+          hqSyncDetail.textContent = detail;
+        }
+      }
+
+      function setHeartbeat(title, detail, tone = 'var(--ok)') {
+        if (warehouseHeartbeatState) {
+          warehouseHeartbeatState.textContent = title;
+          warehouseHeartbeatState.style.color = tone;
+        }
+        if (warehouseHeartbeatDetail) {
+          warehouseHeartbeatDetail.textContent = detail;
+        }
+      }
+
+      refreshRouteStatus();
+
+      if (typeof onMapEvent === 'function' && typeof EVT !== 'undefined') {
+        onMapEvent(EVT.SYSTEM_HEARTBEAT, ({ tone, detail }) => {
+          setHeartbeat(tone || 'Syncing', detail || 'Awaiting global state', tone === 'Critical' ? 'var(--risk)' : tone === 'Watch' ? 'var(--warn)' : 'var(--ok)');
+          addSignal('Heartbeat', detail || 'Global state refreshed', tone === 'Critical' ? 'var(--risk)' : tone === 'Watch' ? 'var(--warn)' : 'var(--ok)');
+        });
+
+        onMapEvent(EVT.HQ_SCENARIO_CHANGED, ({ chaosScore, region, event, emergency }) => {
+          refreshRouteStatus();
+          setHqState(
+            chaosScore > 75 ? 'Critical' : chaosScore > 55 ? 'Watch' : 'Normal',
+            `HQ scenario: ${region} · ${event} · ${emergency ? 'Emergency mode' : 'Standard mode'}`,
+            chaosScore > 75 ? 'var(--risk)' : chaosScore > 55 ? 'var(--warn)' : 'var(--ok)'
+          );
+          addSignal('HQ update', `Chaos score ${chaosScore}`, chaosScore > 75 ? 'var(--risk)' : 'var(--warn)');
+        });
+
+        onMapEvent(EVT.DRIVER_CONGESTION, () => {
+          setHqState('Driver delay', 'Fleet reported congestion on the active route', 'var(--risk)');
+          addSignal('Driver congestion', 'Route pressure increased', 'var(--risk)');
+          refreshRouteStatus();
+        });
+
+        onMapEvent(EVT.DRIVER_REROUTED, () => {
+          setHqState('Bypass active', 'Fleet rerouted around congestion', 'var(--ok)');
+          addSignal('Driver reroute', 'Bypass route accepted', 'var(--ok)');
+          refreshRouteStatus();
+        });
+
+        onMapEvent(EVT.DRIVER_DELIVERED, ({ unit, location }) => {
+          setHqState('Delivered', `${unit} completed delivery at ${location}`, 'var(--ok)');
+          addSignal('Delivery confirmed', `${unit} reached ${location}`, 'var(--ok)');
+        });
+
+        onMapEvent(EVT.WH_TRANSFER_APPROVED, ({ from, to }) => {
+          setHqState('Transfer approved', `Warehouse transfer ${from} → ${to} is in motion`, 'var(--ok)');
+          addSignal('Warehouse transfer', `${from} → ${to}`, 'var(--ok)');
+          refreshRouteStatus();
+        });
+      }
 
       // Approve Transfer button — triggers map animation + event broadcast
       const approveBtn      = document.getElementById('approveTransferBtn');

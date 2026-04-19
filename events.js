@@ -8,6 +8,7 @@ const EVT = {
   DRIVER_DELIVERED:     'driver:delivered',     // Driver completes delivery
   WH_TRANSFER_APPROVED: 'wh:transfer_approved', // Warehouse approves supply transfer
   HQ_SCENARIO_CHANGED:  'hq:scenario_changed',  // National HQ updates scenario
+  SYSTEM_HEARTBEAT:     'system:heartbeat',     // Shared global state heartbeat
 };
 
 const _evtChannel  = new BroadcastChannel('nscns_events_v2');
