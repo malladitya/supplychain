@@ -1112,6 +1112,29 @@ input[type="range"]:focus-visible {
   color: var(--text);
 }
 
+.route-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  width: fit-content;
+}
+
+.route-status.ok {
+  color: var(--ok);
+  border-color: rgba(128, 237, 153, 0.45);
+}
+
+.route-status.warn {
+  color: var(--warn);
+  border-color: rgba(255, 209, 102, 0.45);
+}
+
 /* Leaflet control positioning overrides */
 .leaflet-control-zoom {
   border: 1px solid rgba(255, 255, 255, 0.12) !important;

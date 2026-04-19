@@ -17,21 +17,260 @@ const supplyRouteLinks = [
   ["north",   "coastal"],
 ];
 
-// Driver route waypoints
-const ROUTE_MAIN = [
+// Driver route waypoints (fallbacks). Real routes are fetched from OSRM at runtime.
+const ROUTE_MAIN_FALLBACK = [
   [28.6139, 77.2090],  // New Delhi   (Origin: North Hub)
   [27.4728, 77.6942],  // Mathura
   [27.1767, 78.0081],  // Agra        (Checkpoint)
   [26.8467, 80.9462],  // Lucknow     (Destination: City Hospital)
 ];
 
-const ROUTE_BYPASS = [
+const ROUTE_BYPASS_FALLBACK = [
   [28.6139, 77.2090],  // New Delhi
   [27.4728, 77.6942],  // Mathura
   [25.4484, 78.5685],  // Jhansi      (bypass Agra)
   [25.3176, 81.0000],  // Allahabad
   [26.8467, 80.9462],  // Lucknow
 ];
+
+let ROUTE_MAIN = [...ROUTE_MAIN_FALLBACK];
+let ROUTE_BYPASS = [...ROUTE_BYPASS_FALLBACK];
+
+function _normalizeRoutePoints(raw) {
+  if (!Array.isArray(raw) || !raw.length) return [];
+
+  // Standard shape: [[lat,lng], [lat,lng], ...]
+  if (Array.isArray(raw[0])) {
+    return raw
+      .filter((p) => Array.isArray(p) && p.length >= 2 && Number.isFinite(Number(p[0])) && Number.isFinite(Number(p[1])))
+      .map((p) => [Number(p[0]), Number(p[1])]);
+  }
+
+  // Flattened shape: [lat, lng, lat, lng, ...]
+  const nums = raw.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+  if (nums.length < 4) return [];
+
+  const points = [];
+  for (let i = 0; i + 1 < nums.length; i += 2) {
+    points.push([nums[i], nums[i + 1]]);
+  }
+  return points;
+}
+
+const ROUTE_SNAPSHOT = window.NSCNS_ROUTE_SNAPSHOTS || null;
+const ROUTE_MAIN_SNAPSHOT = _normalizeRoutePoints(ROUTE_SNAPSHOT?.main);
+const ROUTE_BYPASS_SNAPSHOT = _normalizeRoutePoints(ROUTE_SNAPSHOT?.bypass);
+
+if (ROUTE_MAIN_SNAPSHOT.length > 20) {
+  ROUTE_MAIN = ROUTE_MAIN_SNAPSHOT;
+}
+if (ROUTE_BYPASS_SNAPSHOT.length > 20) {
+  ROUTE_BYPASS = ROUTE_BYPASS_SNAPSHOT;
+}
+
+const ORS_API_KEY =
+  (window.NSCNS_CONFIG && window.NSCNS_CONFIG.orsApiKey) ||
+  window.NSCNS_ORS_API_KEY ||
+  window.localStorage.getItem("nscns_ors_api_key") ||
+  "";
+
+const ROUTE_PROVIDERS = [
+  // Preferred provider for reliable routing (requires API key).
+  ...(ORS_API_KEY ? [{ name: "OpenRouteService", kind: "ors" }] : []),
+  { name: "OSRM Demo", kind: "osrm", baseUrl: "https://router.project-osrm.org/route/v1/driving" },
+  { name: "OSMDE Car", kind: "osrm", baseUrl: "https://routing.openstreetmap.de/routed-car/route/v1/driving" },
+];
+
+let _realRoutesPromise = null;
+const _routeStatus = {
+  initialized: false,
+  usingRealMain: false,
+  usingRealBypass: false,
+  providerMain: "Fallback",
+  providerBypass: "Fallback",
+  usingSnapshot: ROUTE_MAIN_SNAPSHOT.length > 20 || ROUTE_BYPASS_SNAPSHOT.length > 20,
+  hasApiKey: Boolean(ORS_API_KEY),
+  error: null,
+};
+
+function _toCoordString([lat, lng]) {
+  return `${lng},${lat}`;
+}
+
+function _routePoint(route, ratio = 0.4) {
+  if (!Array.isArray(route) || !route.length) return null;
+  const i = Math.max(0, Math.min(route.length - 1, Math.floor((route.length - 1) * ratio)));
+  return route[i];
+}
+
+async function _fetchOsrmRouteFromBase(baseUrl, waypoints) {
+  if (!Array.isArray(waypoints) || waypoints.length < 2) return null;
+
+  const coords = waypoints.map(_toCoordString).join(";");
+  const url = `${baseUrl}/${coords}?overview=full&geometries=geojson&steps=false`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const points = data?.routes?.[0]?.geometry?.coordinates;
+    if (!Array.isArray(points) || points.length < 2) return null;
+    return points.map(([lng, lat]) => [lat, lng]);
+  } catch (_) {
+    return null;
+  }
+}
+
+async function _fetchBestRoute(waypoints) {
+  for (const provider of ROUTE_PROVIDERS) {
+    let route = null;
+    if (provider.kind === "ors") {
+      route = await _fetchOrsRoute(waypoints);
+    } else {
+      route = await _fetchOsrmRouteFromBase(provider.baseUrl, waypoints);
+    }
+
+    if (route?.length) {
+      return { route, provider: provider.name };
+    }
+  }
+
+  return { route: null, provider: "Fallback" };
+}
+
+async function _fetchOrsRoute(waypoints) {
+  if (!ORS_API_KEY || !Array.isArray(waypoints) || waypoints.length < 2) return null;
+
+  const url = "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
+  const payload = {
+    coordinates: waypoints.map(([lat, lng]) => [lng, lat]),
+  };
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": ORS_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const points = data?.features?.[0]?.geometry?.coordinates;
+    if (!Array.isArray(points) || points.length < 2) return null;
+    return points.map(([lng, lat]) => [lat, lng]);
+  } catch (_) {
+    return null;
+  }
+}
+
+async function loadRealRoutes() {
+  if (_realRoutesPromise) return _realRoutesPromise;
+
+  // Hard guarantee mode: if local route snapshot exists, use it immediately.
+  if (ROUTE_MAIN_SNAPSHOT.length > 20 || ROUTE_BYPASS_SNAPSHOT.length > 20) {
+    _routeStatus.initialized = true;
+    _routeStatus.usingRealMain = ROUTE_MAIN_SNAPSHOT.length > 20;
+    _routeStatus.usingRealBypass = ROUTE_BYPASS_SNAPSHOT.length > 20;
+    _routeStatus.providerMain = ROUTE_MAIN_SNAPSHOT.length > 20
+      ? (ROUTE_SNAPSHOT?.source || "Local Snapshot")
+      : "Fallback";
+    _routeStatus.providerBypass = ROUTE_BYPASS_SNAPSHOT.length > 20
+      ? (ROUTE_SNAPSHOT?.source || "Local Snapshot")
+      : "Fallback";
+    _routeStatus.error = null;
+
+    _realRoutesPromise = Promise.resolve({
+      main: ROUTE_MAIN,
+      bypass: ROUTE_BYPASS,
+      usingRealMain: _routeStatus.usingRealMain,
+      usingRealBypass: _routeStatus.usingRealBypass,
+      providerMain: _routeStatus.providerMain,
+      providerBypass: _routeStatus.providerBypass,
+    });
+
+    return _realRoutesPromise;
+  }
+
+  _realRoutesPromise = (async () => {
+    const mainSeed = [
+      [28.6139, 77.2090], // Delhi
+      [27.1767, 78.0081], // Agra
+      [26.8467, 80.9462], // Lucknow
+    ];
+
+    const bypassSeed = [
+      [28.6139, 77.2090], // Delhi
+      [25.4484, 78.5685], // Jhansi
+      [25.4358, 81.8463], // Prayagraj
+      [26.8467, 80.9462], // Lucknow
+    ];
+
+    const [mainResult, bypassResult] = await Promise.all([
+      _fetchBestRoute(mainSeed),
+      _fetchBestRoute(bypassSeed),
+    ]);
+
+    const realMain = mainResult.route;
+    const realBypass = bypassResult.route;
+
+    if (realMain?.length) ROUTE_MAIN = realMain;
+    if (realBypass?.length) ROUTE_BYPASS = realBypass;
+
+    _routeStatus.initialized = true;
+    _routeStatus.usingRealMain = Boolean(realMain?.length);
+    _routeStatus.usingRealBypass = Boolean(realBypass?.length);
+    _routeStatus.providerMain = mainResult.provider;
+    _routeStatus.providerBypass = bypassResult.provider;
+    _routeStatus.error = _routeStatus.usingRealMain || _routeStatus.usingRealBypass
+      ? null
+      : "Routing API unavailable. Using fallback coordinates.";
+
+    return {
+      main: ROUTE_MAIN,
+      bypass: ROUTE_BYPASS,
+      usingRealMain: _routeStatus.usingRealMain,
+      usingRealBypass: _routeStatus.usingRealBypass,
+      providerMain: _routeStatus.providerMain,
+      providerBypass: _routeStatus.providerBypass,
+    };
+  })().catch((err) => {
+    _routeStatus.initialized = true;
+    _routeStatus.usingRealMain = false;
+    _routeStatus.usingRealBypass = false;
+    _routeStatus.providerMain = "Fallback";
+    _routeStatus.providerBypass = "Fallback";
+    _routeStatus.error = err?.message || "Failed to load routing data";
+
+    return {
+      main: ROUTE_MAIN,
+      bypass: ROUTE_BYPASS,
+      usingRealMain: false,
+      usingRealBypass: false,
+      providerMain: "Fallback",
+      providerBypass: "Fallback",
+    };
+  })();
+
+  return _realRoutesPromise;
+}
+
+function getRouteStatus() {
+  return {
+    ..._routeStatus,
+    snapshotMeta: ROUTE_SNAPSHOT
+      ? {
+          generatedAt: ROUTE_SNAPSHOT.generatedAt || null,
+          source: ROUTE_SNAPSHOT.source || "Local Snapshot",
+        }
+      : null,
+    providerChain: ROUTE_PROVIDERS.map((p) => p.name),
+    mainPoints: ROUTE_MAIN.length,
+    bypassPoints: ROUTE_BYPASS.length,
+  };
+}
 
 // ─── HELPERS ────────────────────────────────────────────────
 function _scoreColor(s) {
@@ -88,11 +327,11 @@ function initNationalMap() {
 
   // Driver route overlay (thin, on top)
   natDriverRoute = L.polyline(ROUTE_MAIN, {
-    color: "rgba(128,237,153,0.5)", weight: 2, dashArray: "6 5", lineCap: "round",
+    color: "rgba(128,237,153,0.9)", weight: 3, lineCap: "round",
   }).addTo(nationalMap);
 
   // Driver position dot
-  natDriverDot = L.marker(ROUTE_MAIN[2], {
+  natDriverDot = L.marker(_routePoint(ROUTE_MAIN, 0.45) || ROUTE_MAIN[0], {
     icon: L.divIcon({
       html: `<div style="width:10px;height:10px;background:#80ed99;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px rgba(128,237,153,0.9);"></div>`,
       iconSize: [10,10], iconAnchor: [5,5], className: "",
@@ -121,7 +360,7 @@ function initNationalMap() {
     // Redraw driver route with bypass
     if (natDriverRoute) nationalMap.removeLayer(natDriverRoute);
     natDriverRoute = L.polyline(newRouteCoords, {
-      color: "rgba(128,237,153,0.65)", weight: 2.5, dashArray: "8 5", lineCap: "round",
+      color: "rgba(128,237,153,0.9)", weight: 3, lineCap: "round",
     }).addTo(nationalMap);
 
     // Move driver dot to start
@@ -130,6 +369,13 @@ function initNationalMap() {
 
   onMapEvent(EVT.WH_TRANSFER_APPROVED, ({ from, to }) => {
     _animateTransferLine(from, to);
+  });
+
+  // Upgrade to real road routes when API response arrives.
+  loadRealRoutes().then(({ main }) => {
+    if (!nationalMap) return;
+    if (natDriverRoute) natDriverRoute.setLatLngs(main);
+    if (natDriverDot) natDriverDot.setLatLng(_routePoint(main, 0.45) || main[0]);
   });
 }
 
@@ -201,7 +447,7 @@ function initDriverMap() {
     .addTo(driverMap).bindPopup("<b>🏥 Destination: City Hospital</b><br>Lucknow");
 
   // Truck marker with pulsing ring
-  driverMarker = L.marker(ROUTE_MAIN[2], {
+  driverMarker = L.marker(_routePoint(ROUTE_MAIN, 0.45) || ROUTE_MAIN[0], {
     icon: L.divIcon({
       html: `<div class="driver-map-pin"><div class="driver-map-pin-ring"></div></div>`,
       iconSize: [24,24], iconAnchor: [12,12], className: "",
@@ -218,6 +464,14 @@ function initDriverMap() {
     if (chaosScore > 75) {
       _driverNotify("⚠️ National HQ reports critical Chaos Score. Stay alert.");
     }
+  });
+
+  // Upgrade to real road route if available.
+  loadRealRoutes().then(({ main }) => {
+    if (!driverMap) return;
+    if (driverRouteLine) driverRouteLine.setLatLngs(main);
+    if (driverMarker) driverMarker.setLatLng(_routePoint(main, 0.45) || main[0]);
+    driverMap.fitBounds(driverRouteLine.getBounds(), { padding: [40, 40] });
   });
 }
 
@@ -278,7 +532,7 @@ function triggerRerouteOnMap() {
   // Redraw as bypass route
   if (driverRouteLine) driverMap.removeLayer(driverRouteLine);
   driverRouteLine = L.polyline(ROUTE_BYPASS, {
-    color: "#80ed99", weight: 4, dashArray: "14 6", lineCap: "round",
+    color: "#80ed99", weight: 4, lineCap: "round",
   }).addTo(driverMap);
 
   if (driverMarker) driverMarker.setLatLng(ROUTE_BYPASS[0]);
@@ -541,7 +795,7 @@ function initWarehouseMap() {
 
   // Active driver route shadow (so warehouse can follow fleet progress)
   whDriverOverlay = L.polyline(ROUTE_MAIN, {
-    color: "rgba(128,237,153,0.35)", weight: 1.5, dashArray: "5 5",
+    color: "rgba(128,237,153,0.7)", weight: 2,
   }).addTo(warehouseMap);
 
   warehouseMap.fitBounds([WH_POS, ...WH_SOURCES.map(s => [s.lat, s.lng])], { padding: [40,40] });
@@ -554,15 +808,21 @@ function initWarehouseMap() {
       radius: 30000, weight: 1.5, dashArray: "5 5",
     }).addTo(warehouseMap).bindPopup("⚠️ <b>Fleet #710 Congestion</b><br>Delivery may be delayed").openPopup();
 
-    if (whDriverOverlay) whDriverOverlay.setStyle({ color: "rgba(255,107,107,0.45)" });
+    if (whDriverOverlay) whDriverOverlay.setStyle({ color: "rgba(255,107,107,0.75)", weight: 2.5 });
   });
 
   onMapEvent(EVT.DRIVER_REROUTED, ({ newRouteCoords }) => {
     if (whCongZone) { warehouseMap.removeLayer(whCongZone); whCongZone = null; }
     if (whDriverOverlay) warehouseMap.removeLayer(whDriverOverlay);
     whDriverOverlay = L.polyline(newRouteCoords, {
-      color: "rgba(128,237,153,0.45)", weight: 2, dashArray: "7 5",
+      color: "rgba(128,237,153,0.85)", weight: 2.5,
     }).addTo(warehouseMap);
+  });
+
+  // Upgrade overlay to real road geometry.
+  loadRealRoutes().then(({ main }) => {
+    if (!warehouseMap) return;
+    if (whDriverOverlay) whDriverOverlay.setLatLngs(main);
   });
 }
 
@@ -575,7 +835,7 @@ function highlightWarehouseTransfer() {
 
   const src = WH_SOURCES[0]; // South Arc
   const moveLine = L.polyline([[src.lat, src.lng], WH_POS], {
-    color: "#80ed99", weight: 4, dashArray: "14 6", opacity: 0.95,
+    color: "#80ed99", weight: 4, opacity: 0.95,
   }).addTo(warehouseMap);
 
   const pulse = L.circle([src.lat, src.lng], {

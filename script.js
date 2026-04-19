@@ -34,6 +34,7 @@ const outputs = {
   integrationList: document.getElementById("integrationList"),
   historyList: document.getElementById("historyList"),
   liveMap: document.getElementById("liveMap"),
+  routeDataStatus: document.getElementById("routeDataStatus"),
 };
 
 const regions = [
@@ -521,6 +522,11 @@ function renderLiveMap(regionViews) {
     return;
   }
 
+  // When Leaflet map is active, never overwrite the map container DOM.
+  if (typeof nationalMap !== "undefined" && nationalMap) {
+    return;
+  }
+
   outputs.liveMap.innerHTML = "";
 
   regionViews.forEach((region) => {
@@ -561,6 +567,47 @@ function updateScoreDisplays(score, label) {
       node.style.color = state.color;
     }
   });
+}
+
+function updateRouteDataStatus() {
+  const node = outputs.routeDataStatus;
+  if (!node) return;
+
+  if (typeof getRouteStatus !== "function") {
+    node.textContent = "Routing provider unavailable";
+    node.classList.remove("ok");
+    node.classList.add("warn");
+    return;
+  }
+
+  const status = getRouteStatus();
+  if (!status.initialized) {
+    node.textContent = "Loading real route...";
+    node.classList.remove("ok");
+    node.classList.remove("warn");
+    return;
+  }
+
+  if (status.usingRealMain) {
+    if (status.usingSnapshot) {
+      const src = status.snapshotMeta?.source || "Local Snapshot";
+      node.textContent = `Exact route snapshot: ${src} (${status.mainPoints} points)`;
+      node.classList.add("ok");
+      node.classList.remove("warn");
+      return;
+    }
+
+    const keyTag = status.providerMain === "OpenRouteService" ? "API key" : "public";
+    node.textContent = `Real route: ${status.providerMain} (${status.mainPoints} points, ${keyTag})`;
+    node.classList.add("ok");
+    node.classList.remove("warn");
+  } else {
+    node.textContent = status.hasApiKey
+      ? "Fallback route in use (provider failed)"
+      : "Fallback route in use (add ORS API key for reliability)";
+    node.classList.remove("ok");
+    node.classList.add("warn");
+  }
 }
 
 function render() {
@@ -612,7 +659,11 @@ function render() {
   renderList(outputs.integrationList, integrationStatus);
   renderList(outputs.historyList, historyItems);
   renderRegionGrid(regionViews);
-  renderLiveMap(regionViews);
+
+  // Keep lightweight fallback tiles only when Leaflet is not initialized.
+  if (typeof nationalMap === "undefined" || !nationalMap) {
+    renderLiveMap(regionViews);
+  }
 
   // ── Run all 13 Feature Engines ──────────────────────────
   if (typeof ChaosEngine !== 'undefined') {
@@ -631,8 +682,21 @@ function render() {
     const healPanel = document.getElementById('selfHealStatus');
     if (healPanel) {
       healPanel.innerHTML = healing
-        ? `<span style="color:#80ed99">⚙️ ${healing.action}: ${healing.affectedShipments} shipments via ${healing.selectedRoute} (+${healing.costIncrease})</span>`
+        ? `<span style="color:#80ed99">⚙️ Auto-reroute engaged: ${healing.affectedShipments} shipments via ${healing.selectedRoute} (${healing.costIncrease})</span>`
         : `<span style="color:var(--muted)">No healing required. Score below threshold (${SelfHealingEngine.THRESHOLD}).</span>`;
+    }
+
+    if (typeof showAllocationFlows === 'function' && healing?.routeCoords?.length && primaryRegion.score > SelfHealingEngine.THRESHOLD) {
+      showAllocationFlows([
+        {
+          fromLabel: 'North Hub',
+          toLabel: 'Central Corridor',
+          amount: healing.affectedShipments,
+          goods: 'Priority mixed cargo',
+          fromCoords: healing.routeCoords[0],
+          toCoords: healing.routeCoords[healing.routeCoords.length - 1],
+        },
+      ]);
     }
   }
 
@@ -701,9 +765,19 @@ function render() {
   }
 
   // ── Update Leaflet OSM map ──────────────────────────────
+  if (typeof initNationalMap === 'function') {
+    initNationalMap();
+  }
+
   if (typeof updateNationalMap === 'function') {
     updateNationalMap(regionViews, scenario.region);
   }
+
+  if (typeof nationalMap !== 'undefined' && nationalMap?.invalidateSize) {
+    window.requestAnimationFrame(() => nationalMap.invalidateSize());
+  }
+
+  updateRouteDataStatus();
 
   // ── Broadcast to Driver + Warehouse dashboards ──────────
   if (typeof emitMapEvent === 'function') {
@@ -957,7 +1031,15 @@ if (loginSubmitBtn) {
 
 initializeControls();
 wireControls();
-render();
 
-// Initialize national Leaflet map (requires DOM to be ready)
+// Initialize map first so the first render paints actual live layers, not fallback tiles.
 if (typeof initNationalMap === 'function') initNationalMap();
+
+if (typeof loadRealRoutes === 'function') {
+  loadRealRoutes().finally(() => {
+    updateRouteDataStatus();
+    render();
+  });
+}
+
+render();
