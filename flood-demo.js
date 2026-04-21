@@ -129,6 +129,11 @@ const FLOOD_DEMO = {
     this.timers.push(endTimer);
   },
 
+  runSteps() {
+    // Alias for HQ interface compatibility
+    this.start();
+  },
+
   stop() {
     this.timers.forEach(t => clearTimeout(t));
     this.timers = [];
@@ -159,14 +164,14 @@ const FLOOD_DEMO = {
   _showConsole() {
     const console = document.getElementById('floodDemoConsole');
     if (console) {
-      console.style.display = 'block';
+      console.classList.add('active');
       document.getElementById('demoStepList').innerHTML = '';
     }
   },
 
   _hideConsole() {
     const el = document.getElementById('floodDemoConsole');
-    if (el) el.style.display = 'none';
+    if (el) el.classList.remove('active');
   },
 
   _renderStep(step) {
