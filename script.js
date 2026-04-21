@@ -1330,6 +1330,68 @@ if (openLoginBtnSecondary && loginModal) {
   });
 }
 
+// Mobile Login Button (new)
+const openLoginBtnMobile = document.getElementById("openLoginBtnMobile");
+if (openLoginBtnMobile && loginModal) {
+  openLoginBtnMobile.addEventListener("click", () => {
+    loginModal.classList.add("active");
+    if(loginError) loginError.style.display = "none";
+    // Close mobile nav after clicking login
+    const menuToggle = document.getElementById("menuToggle");
+    const mobileNav = document.getElementById("mobileNav");
+    if (menuToggle && mobileNav) {
+      menuToggle.classList.remove("active");
+      mobileNav.classList.remove("active");
+      document.body.style.overflow = "";
+    }
+  });
+}
+
+/**
+ * Proactive Login Trigger
+ * Opens the login modal and pre-selects the requested role.
+ */
+window.openLogin = function(role) {
+  const modal = document.getElementById("loginModal");
+  const roleSelect = document.getElementById("loginRole");
+  if (modal) {
+    modal.classList.add("active");
+    if (roleSelect && role) {
+      roleSelect.value = role;
+    }
+    const errorEl = document.getElementById("loginError");
+    if (errorEl) errorEl.style.display = "none";
+  }
+};
+
+/**
+ * Shared Info Modal Logic for High-Engagement Simulation Features
+ */
+window.openInfoModal = function(title, content) {
+  // Create modal on the fly if it doesn't exist
+  let modal = document.getElementById("infoModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "infoModal";
+    modal.className = "modal";
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 500px;">
+        <span class="modal-close" onclick="this.closest('.modal').classList.remove('active')">&times;</span>
+        <h2 id="infoModalTitle" style="margin-bottom: 1rem; color: var(--primary);"></h2>
+        <div id="infoModalBody" style="color: var(--text-muted); line-height: 1.6;"></div>
+        <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+          <button class="btn btn-small" onclick="this.closest('.modal').classList.remove('active')">Acknowledge</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  
+  document.getElementById("infoModalTitle").textContent = title;
+  document.getElementById("infoModalBody").innerHTML = content;
+  modal.classList.add("active");
+};
+
 // Mobile Menu Toggle
 const menuToggle = document.getElementById("menuToggle");
 const mobileNav = document.getElementById("mobileNav");
@@ -1429,3 +1491,44 @@ if (typeof loadRealRoutes === 'function') {
 }
 
 render();
+
+// Interactivity for Conceptual Features
+document.addEventListener("DOMContentLoaded", () => {
+  // Bind Policy Simulator feature card in index.html (Feature Case #7)
+  const features = document.querySelectorAll(".feature-card");
+  features.forEach(card => {
+    if (card.textContent.includes("Policy Simulator")) {
+      card.style.cursor = "pointer";
+      card.addEventListener("click", () => {
+        openInfoModal("Policy Simulator · Active", `
+          <p>The TezFlow Policy Engine allows you to simulate high-impact logistics scenarios before they reach the ground.</p>
+          <ul style="margin: 1rem 0; padding-left: 1.2rem;">
+            <li><strong>Current Model:</strong> Balanced Resilience</li>
+            <li><strong>Input Delta:</strong> +8% Weather Sensitivity</li>
+            <li><strong>Strategic Projection:</strong> Simulation predicts a 14% reduction in potential bottlenecks if Emergency Priority is shifted to the South Arc.</li>
+          </ul>
+          <p style="font-size: 0.82rem; color: var(--warn); padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">Live simulation mode is restricted to 'HQ Operator' level clearance.</p>
+        `);
+      });
+    }
+  });
+
+  // Handle Audit Logs in Warehouse & HQ
+  const auditItems = document.querySelectorAll('.bottom-nav-item');
+  auditItems.forEach(item => {
+    if (item.querySelector('span')?.textContent === "Logs") {
+      item.addEventListener("click", (e) => {
+        e.preventDefault();
+        openInfoModal("Audit Ledger · Real-Time", `
+          <div style="font-family: 'Space Mono', monospace; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+            <div style="margin-bottom: 0.5rem;"><span style="color: var(--primary);">[00:14:22]</span> HQ: Scenario 'Storm Surge' synchronized across nodes.</div>
+            <div style="margin-bottom: 0.5rem;"><span style="color: var(--primary);">[00:12:05]</span> WH-NORTH: Bulk transfer of Med-Kit-X approved.</div>
+            <div style="margin-bottom: 0.5rem;"><span style="color: var(--primary);">[00:08:55]</span> FLEET-710: Reroute accepted via NH-44 Bypass.</div>
+            <div style="margin-bottom: 0.5rem;"><span style="color: var(--primary);">[00:02:11]</span> SYSTEM: Heartbeat nominal. Latency 12ms.</div>
+            <div style="opacity: 0.5; font-style: italic;">End of latest cycle. Streaming live...</div>
+          </div>
+        `);
+      });
+    }
+  });
+});

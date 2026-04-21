@@ -1,8 +1,8 @@
-# NSCNS - National Supply Chain Nervous System
+# TezFlow - National Logistics Intelligence Platform
 
 Resilient Logistics and Dynamic Supply Chain Optimization prototype.
 
-NSCNS continuously analyzes transit and operational signals, detects disruption patterns early, and triggers route and allocation responses before localized failures cascade into broad delay.
+TezFlow continuously analyzes transit and operational signals, detects disruption patterns early, and triggers route and allocation responses before localized failures cascade into broad delay.
 
 ## Objective Alignment
 

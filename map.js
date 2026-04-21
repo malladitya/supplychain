@@ -614,7 +614,7 @@ function updateNationalMap(regionViews, primaryId) {
 
     regionMarkers[r.id]?.setStyle({ fillColor: color, color: isPrimary ? "#fff" : "#0e2030", weight: isPrimary ? 3 : 2, radius: isPrimary ? 11 : 9 });
     regionMarkers[r.id]?.bindPopup(`
-      <div class="nscns-popup">
+      <div class="tezflow-popup">
         <div class="popup-title">${r.label}</div>
         <div class="popup-sub">${r.role} · ${c.city}</div>
         <div class="popup-row"><span>Chaos Score</span><strong style="color:${color}">${r.score}</strong></div>

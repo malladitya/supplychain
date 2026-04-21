@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NSCNS | National Supply Chain Nervous System</title>
+  <title>TezFlow | National Supply Chain Nervous System</title>
   <meta
     name="description"
-    content="National Supply Chain Nervous System (NSCNS): an AI-powered platform for real-time logistics intelligence, crisis prediction, and adaptive national coordination."
+    content="TezFlow: an AI-powered platform for real-time logistics intelligence, crisis prediction, and adaptive national coordination."
   />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,26 +18,33 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-  <div class="bg-shape bg-shape-1" aria-hidden="true"></div>
-  <div class="bg-shape bg-shape-2" aria-hidden="true"></div>
+  <div class="bg-shape bg-shape-1" aria-hidden="true" style="background: rgba(139, 168, 136, 0.12);"></div>
+  <div class="bg-shape bg-shape-2" aria-hidden="true" style="background: rgba(197, 160, 40, 0.08);"></div>
+  <style>
+    .hero {
+      background-image: 
+        linear-gradient(rgba(10, 13, 10, 0.85), rgba(10, 13, 10, 0.95)),
+        url('tezflow_hero_bg_1776794201939.png');
+      background-size: cover;
+      background-position: center;
+    }
+  </style>
 
   <header class="site-header">
     <div class="container nav-wrap">
-      <a href="#home" class="brand">
-        <span class="brand-dot"></span>
-        NSCNS
+      <a href="index.html" class="brand">
+        <img src="Logo2.png.png" class="brand-logo" alt="TezFlow">
         <span class="live-indicator"><span class="live-dot"></span> LIVE</span>
       </a>
       <nav class="nav-links" aria-label="Primary">
-        <a href="#problem">Problem</a>
-        <a href="#features">Features</a>
-        <a href="#control-center">Control Center</a>
-        <a href="#impact">Impact</a>
-        <a href="#roadmap">Roadmap</a>
+        <a href="#problem">The Vision</a>
+        <a href="#features">Intelligence</a>
+        <a href="#control-center">Terminals</a>
+        <a href="#impact">Ecosystem</a>
+        <a href="#roadmap">Scale</a>
       </nav>
-      <div class="header-actions" style="display: flex; gap: 0.8rem;">
-        <a class="btn btn-small btn-ghost" href="#contact">Discuss</a>
-        <button class="btn btn-small" id="openLoginBtn">Login <span aria-hidden="true">&rarr;</span></button>
+      <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+        <button class="btn btn-small" id="openLoginBtn">Terminal Access &rarr;</button>
         <button class="menu-toggle" id="menuToggle" aria-label="Open menu">
           <span></span>
           <span></span>
@@ -47,12 +54,13 @@
     </div>
     <div class="mobile-nav" id="mobileNav">
       <nav aria-label="Mobile">
-        <a href="#problem">Problem</a>
-        <a href="#features">Features</a>
-        <a href="#control-center">Control Center</a>
-        <a href="#impact">Impact</a>
-        <a href="#roadmap">Roadmap</a>
+        <a href="#problem">The Vision</a>
+        <a href="#features">Intelligence</a>
+        <a href="#control-center">Terminals</a>
+        <a href="#impact">Ecosystem</a>
+        <a href="#roadmap">Scale</a>
         <a href="#contact">Discuss</a>
+        <button class="btn btn-small" id="openLoginBtnMobile" style="width: 100%; margin-top: 1rem;">Terminal Access &rarr;</button>
       </nav>
     </div>
   </header>
@@ -61,45 +69,59 @@
     <section id="home" class="hero section">
       <div class="container hero-grid">
         <div class="hero-copy reveal">
-          <p class="eyebrow">National Logistics Intelligence Platform</p>
-          <h1>National Supply Chain Nervous System</h1>
+          <p class="eyebrow" style="color: var(--secondary);">Velocity Intelligence Platform</p>
+          <h1 style="background: linear-gradient(to bottom right, #FFFFFF 40%, var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">TezFlow: Intelligent Supply Chain Dynamics</h1>
           <p class="hero-lead">
-            A unified AI-powered framework that senses disruptions, predicts shortages,
-            and coordinates real-time response across the nation.
+            Continuous resilience analytics and predictive risk orchestration. We synchronize your entire national network through an adaptive "Nature-Tech" ecosystem.
           </p>
           <div class="hero-actions">
-            <a class="btn" href="#features">Explore Features</a>
-            <a class="btn btn-ghost" href="#roadmap">View Rollout Plan</a>
-            <a class="btn btn-ghost" href="hq.html">Open HQ Command</a>
+            <button class="btn" onclick="openLogin('hq')">Enter HQ Command</button>
+            <a class="btn btn-ghost" href="#features">Explore AI Systems</a>
           </div>
           <ul class="hero-metrics">
             <li>
-              <span class="metric-value">13</span>
-              <span class="metric-label">Core Modules</span>
+              <span class="metric-value">94.2%</span>
+              <span class="metric-label">Network Resilience</span>
             </li>
             <li>
-              <span class="metric-value">24m</span>
-              <span class="metric-label">Scale Timeline</span>
+              <span class="metric-value">12ms</span>
+              <span class="metric-label">Node Latency</span>
             </li>
             <li>
-              <span class="metric-value">24/7</span>
-              <span class="metric-label">Operational Visibility</span>
+              <span class="metric-value">640+</span>
+              <span class="metric-label">Neural Nodes</span>
             </li>
           </ul>
         </div>
 
         <aside class="hero-panel reveal">
-          <h2>Live Chaos Score Prototype</h2>
-          <p>Simulated regional stress index combining weather, traffic, and supply-demand pressure.</p>
-          <div class="score-panel">
-            <p class="score-label">Current Regional Chaos Score</p>
-            <p class="score-value" id="heroChaosScore">62</p>
-            <p class="score-state" id="heroChaosState">High Alert</p>
-            <label for="stressRange">Adjust stress scenario</label>
-            <input type="range" id="stressRange" min="0" max="100" value="62" />
-            <div class="range-legend">
-              <span>Stable</span>
-              <span>Disrupted</span>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+            <div>
+              <h2 style="font-size: 1.1rem; margin-bottom: 0.25rem;">Chaos Core Terminal</h2>
+              <p style="font-size: 0.85rem; color: var(--text-muted);">Real-time regional stress telemetry</p>
+            </div>
+            <span style="background: rgba(249,65,68,0.1); color: var(--status-risk); font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 4px; border: 1px solid rgba(249,65,68,0.2);">MISSION CRITICAL</span>
+          </div>
+          
+          <div class="score-panel" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); position: relative; overflow: hidden;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--status-risk), transparent);"></div>
+            <p class="score-label">Regional Entropy Index</p>
+            <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+              <p class="score-value" id="heroChaosScore" style="color: var(--status-risk);">62</p>
+              <span style="font-size: 1.5rem; color: var(--text-muted); font-weight: 300;">/100</span>
+            </div>
+            <p class="score-state" id="heroChaosState" style="color: var(--status-risk); letter-spacing: 0.05em; font-size: 0.9rem; font-weight: bold;">CRITICAL STRESS DETECTED</p>
+            
+            <div style="margin-top: 1.5rem;">
+              <div style="display:flex; justify-content:space-between; font-size: 0.75rem; margin-bottom: 0.5rem; color: var(--text-muted);">
+                <label for="stressRange">Scenario Stress Modulation</label>
+                <span id="rangeVal">62%</span>
+              </div>
+              <input type="range" id="stressRange" min="0" max="100" value="62" style="height: 4px; border-radius: 2px;" title="Adjust Chaos Score Scenario" />
+              <div class="range-legend" style="margin-top: 0.5rem;">
+                <span>Equilibrium</span>
+                <span>Cascade Failure</span>
+              </div>
             </div>
           </div>
         </aside>
@@ -108,8 +130,8 @@
 
     <section id="problem" class="section">
       <div class="container">
-        <p class="eyebrow reveal">Why NSCNS</p>
-        <h2 class="section-title reveal">Current national supply chains are reactive and fragmented</h2>
+        <p class="eyebrow reveal">The Vision</p>
+        <h2 class="section-title reveal">Current logistics networks are fragmented and reactive</h2>
         <div class="problem-grid">
           <article class="card reveal">
             <h3>Data Silos</h3>
@@ -133,8 +155,8 @@
 
     <section id="features" class="section section-alt">
       <div class="container">
-        <p class="eyebrow reveal">Core Intelligence Stack</p>
-        <h2 class="section-title reveal">13 capabilities for a self-adaptive national logistics network</h2>
+        <p class="eyebrow reveal">Neural Intelligence Stack</p>
+        <h2 class="section-title reveal">13 adaptive engines for an autonomous national network</h2>
         <div class="feature-grid">
           <article class="feature-card reveal"><h3>1. Chaos Score Engine</h3><p>Continuous risk scoring for every region.</p></article>
           <article class="feature-card reveal"><h3>2. Self-Healing Operations</h3><p>Auto-rerouting and dynamic priority updates.</p></article>
@@ -161,17 +183,17 @@
           <article class="card reveal">
             <h3>National HQ</h3>
             <p>Live national command with route intelligence, weather fusion, and heartbeat synchronization.</p>
-            <a class="btn" href="hq.html">Open HQ Command</a>
+            <button class="btn" onclick="openLogin('hq')">Open HQ Command</button>
           </article>
           <article class="card reveal">
             <h3>Warehouse Node</h3>
             <p>Approve transfers, watch inbound dependencies, and track fleet impact on local stock posture.</p>
-            <a class="btn" href="warehouse.html">Open Warehouse Console</a>
+            <button class="btn" onclick="openLogin('warehouse')">Open Warehouse Console</button>
           </article>
           <article class="card reveal">
             <h3>Driver Node</h3>
             <p>Report congestion, accept reroutes, and synchronize field execution with national plans.</p>
-            <a class="btn" href="driver.html">Open Driver Console</a>
+            <button class="btn" onclick="openLogin('driver')">Open Driver Console</button>
           </article>
           <article class="card reveal">
             <h3>Quick Login</h3>
@@ -206,8 +228,8 @@
 
     <section id="roadmap" class="section section-alt">
       <div class="container">
-        <p class="eyebrow reveal">Implementation Plan</p>
-        <h2 class="section-title reveal">Phased rollout from pilot to national scale</h2>
+        <p class="eyebrow reveal">Scalability Roadmap</p>
+        <h2 class="section-title reveal">Dynamic deployment from Alpha Pilot to National Grid</h2>
         <div class="timeline">
           <article class="timeline-item reveal">
             <p class="phase">Phase 1 · 0-6 months</p>
@@ -237,10 +259,10 @@
       <div class="container cta-box reveal">
         <h2>Ready to shape the future of national logistics?</h2>
         <p>
-          NSCNS can become a strategic foundation for resilient public service delivery,
+          TezFlow can become a strategic foundation for resilient public service delivery,
           crisis readiness, and transparent data-driven governance.
         </p>
-        <a class="btn" href="mailto:contact@nscns.example">Start the Discussion</a>
+        <a class="btn" href="mailto:contact@tezflow.example">Start the Discussion</a>
       </div>
     </section>
   </main>
@@ -287,9 +309,22 @@
   </div>
 
   <footer class="site-footer">
-    <div class="container footer-wrap">
-      <p>NSCNS Concept Website</p>
-      <p>Built for strategic presentation and policy discussion</p>
+    <div class="container" style="padding: 3rem 0; border-top: 1px solid var(--glass-border); text-align: center;">
+      <a href="index.html" class="brand" style="justify-content: center; margin-bottom: 1rem;">
+        <img src="Logo2.png.png" class="brand-logo" alt="TezFlow" style="height: 48px;">
+      </a>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">National Supply Chain Nervous System · Intelligent Resource Orchestration</p>
+      
+      <nav style="display: flex; justify-content: center; gap: 2.5rem; margin-bottom: 2rem; font-size: 0.85rem;">
+        <a href="#features" style="color: var(--primary); text-decoration: none;">Intelligence</a>
+        <a href="#control-center" style="color: var(--primary); text-decoration: none;">Terminals</a>
+        <a href="#impact" style="color: var(--primary); text-decoration: none;">Ecosystem</a>
+        <a href="#contact" style="color: var(--primary); text-decoration: none;">Discuss</a>
+      </nav>
+      
+      <div style="font-size: 0.75rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase;">
+        &copy; 2026 TezFlow · NS-CNS Security Protocol Active
+      </div>
     </div>
   </footer>
 

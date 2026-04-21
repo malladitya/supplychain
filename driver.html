@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fleet Driver Dashboard | NSCNS</title>
+  <title>Field Terminal | TezFlow</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -14,26 +14,27 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="auth-check.js"></script>
   <style>
-    body { background: #02080c; }
+    body { background: var(--bg-dark); }
 
     .bg-shape-driver {
       position: fixed;
-      width: 300px; height: 300px;
+      width: 400px; height: 400px;
       border-radius: 50%;
-      filter: blur(80px);
-      background: rgba(128, 237, 153, 0.15);
-      top: -50px; left: -50px;
+      filter: blur(100px);
+      background: rgba(139, 168, 136, 0.12);
+      top: -100px; left: -100px;
       z-index: -1;
-      animation: pulse-dot 4s infinite alternate;
+      animation: pulse-dot 5s infinite alternate;
     }
 
     .driver-app {
-      max-width: 480px;
+      max-width: 520px;
       margin: 0 auto;
-      padding: 1.5rem;
+      padding: 2rem;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      gap: 1.5rem;
     }
 
     .driver-header {
@@ -46,23 +47,23 @@
     .driver-status { text-align: center; margin-bottom: 1.5rem; }
 
     .big-score {
-      font-size: 5rem;
-      font-family: "Sora", sans-serif;
+      font-size: 5.5rem;
+      font-family: var(--font-heading);
       margin: 0.5rem 0;
-      background: linear-gradient(120deg, var(--ok), #38b000);
+      background: linear-gradient(120deg, var(--primary), var(--ok));
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
+      font-weight: 800;
     }
 
     .route-card {
-      background: rgba(255, 255, 255, 0.04);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 1.8rem;
+      box-shadow: var(--shadow-premium);
     }
 
     .route-timeline {
@@ -79,9 +80,9 @@
       position: absolute;
       left: -26px; top: 4px;
       width: 10px; height: 10px;
-      background: var(--accent);
+      background: var(--primary);
       border-radius: 50%;
-      box-shadow: 0 0 10px var(--accent);
+      box-shadow: 0 0 15px var(--primary-glow);
     }
 
     .action-grid {
@@ -99,14 +100,14 @@
     }
 
     .live-status-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 14px;
-      padding: 1rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 1.2rem;
     }
 
-    .btn-driver { font-size: 1.1rem; padding: 1rem; }
-    .btn-alert  { background: linear-gradient(120deg, #ff6b6b, #c92a2a); color: #fff; }
+    .btn-driver { font-size: 1.1rem; padding: 1.2rem; }
+    .btn-alert  { background: linear-gradient(120deg, var(--status-risk), #c92a2a); color: #fff; }
 
     #rerouteAlert {
       display: none;
@@ -139,8 +140,8 @@
     #rerouteCountdown .cd-num {
       font-size: 1.4rem;
       font-weight: 800;
-      font-family: "Sora", sans-serif;
-      color: #ff6b6b;
+      font-family: var(--font-heading);
+      color: var(--status-risk);
       min-width: 1.6rem;
       display: inline-block;
       text-align: center;
@@ -172,15 +173,18 @@
     }
   </style>
 </head>
-<body>
+<body class="has-dashboard-footer">
   <div class="bg-shape-driver"></div>
 
   <div class="driver-app">
     <header class="driver-header">
-      <div>
-        <h2 style="font-size: 1.2rem;">Fleet Unit #710</h2>
-        <p style="color: var(--muted); font-size: 0.9rem;">Punjab Mission · Agra → Amritsar</p>
-      </div>
+      <a href="index.html" style="display: flex; align-items: center; gap: 1rem; text-decoration: none; color: inherit;">
+        <img src="Logo2.png.png" class="brand-logo" alt="TezFlow">
+        <div>
+          <h2 style="font-size: 1.1rem; font-family: 'Space Grotesk', sans-serif; line-height: 1;">Unit Alpha-710</h2>
+          <p style="color: var(--text-muted); font-size: 0.8rem;">Intelligence Feed · Active Route</p>
+        </div>
+      </a>
       <button onclick="logout()" class="btn btn-small btn-ghost" style="cursor: pointer;">Logout</button>
     </header>
 
@@ -470,6 +474,50 @@
       emitMapEvent(EVT.DRIVER_DELIVERED, { unit: '#710', location: 'Lucknow City Hospital' });
       addDriverSignal('Delivery sent', 'Broadcast to HQ and warehouse', 'var(--ok)');
     });
+  </script>
+  <!-- Bottom Navigation (Mobile Only) -->
+  <nav class="bottom-nav">
+    <a href="hq.html" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>HQ</span>
+    </a>
+    <a href="warehouse.html" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 14H4v-4h11v4zm0-5H4V9h11v4zm5 5h-4V9h4v9z"/></svg>
+      <span>Logs</span>
+    </a>
+    <a href="driver.html" class="bottom-nav-item active">
+      <svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+      <span>Driver</span>
+    </a>
+    <a href="index.html" class="bottom-nav-item">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+      <span>Info</span>
+    </a>
+  </nav>
+
+  <footer class="dashboard-footer" style="justify-content: center; gap: 3rem;">
+    <div class="footer-sync-indicator">
+      <div class="sync-pulse"></div>
+      <span style="font-family: 'Space Mono', monospace; font-size: 0.75rem; letter-spacing: 0.05em;">FLEET: <strong style="color:var(--ok)">ACTIVE</strong></span>
+    </div>
+    <div style="font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--text-muted); opacity: 0.8;">
+      RELAY: <strong style="color:var(--primary)">SAT-7</strong> | <span id="footerClock">00:00:00</span>
+    </div>
+  </footer>
+
+  <script src="auth-check.js"></script>
+  <script>
+    function updateFooterClock() {
+      const now = new Date();
+      const clock = document.getElementById('footerClock');
+      if (clock) clock.innerText = now.toLocaleTimeString();
+    }
+    setInterval(updateFooterClock, 1000);
+    updateFooterClock();
+
+    if (window.innerWidth <= 768) {
+      document.body.classList.add('has-bottom-nav');
+    }
   </script>
 </body>
 </html>
