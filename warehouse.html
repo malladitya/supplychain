@@ -134,6 +134,14 @@
         </div>
       </header>
 
+      <div id="incidentBanner" style="display:none; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; padding:0.8rem 1rem; border-radius:14px; border:1px solid rgba(255,107,107,0.45); background:rgba(255,107,107,0.12); color:var(--text);">
+        <div>
+          <strong data-incident-title>Incident Active</strong>
+          <div data-incident-detail style="font-size:0.9rem; color:var(--muted);">Waiting for incident update</div>
+        </div>
+        <div style="font-size:0.85rem; color:var(--warn); font-weight:700;">Warehouse sync</div>
+      </div>
+
       <div class="wh-grid">
         <div class="stat-card">
           <p class="eyebrow">Medical Supply Level</p>
@@ -281,6 +289,17 @@
 
       refreshRouteStatus();
 
+      const restoreIncidentState = () => {
+        if (typeof getNSCNSIncidentState !== 'function') return;
+        const state = getNSCNSIncidentState();
+        if (state && state.incident === 'punjab_flood' && state.status === 'active') {
+          setHqState('Incident mode', 'Punjab flood active. Allocation priorities elevated.', 'var(--risk)');
+          if (typeof syncPunjabFloodStage === 'function') syncPunjabFloodStage(state.stage || 'enroute');
+        }
+      };
+
+      restoreIncidentState();
+
       if (typeof onMapEvent === 'function' && typeof EVT !== 'undefined') {
         onMapEvent(EVT.SYSTEM_HEARTBEAT, ({ tone, detail }) => {
           setHeartbeat(tone || 'Syncing', detail || 'Awaiting global state', tone === 'Critical' ? 'var(--risk)' : tone === 'Watch' ? 'var(--warn)' : 'var(--ok)');
@@ -318,6 +337,21 @@
           setHqState('Transfer approved', `Warehouse transfer ${from} → ${to} is in motion`, 'var(--ok)');
           addSignal('Warehouse transfer', `${from} → ${to}`, 'var(--ok)');
           refreshRouteStatus();
+        });
+
+        onMapEvent(EVT.INCIDENT_MODE, ({ incident, status, stage }) => {
+          if (incident !== 'punjab_flood') return;
+
+          if (status === 'active') {
+            const currentStage = stage || 'enroute';
+            setHqState(currentStage === 'rerouted' ? 'Route changed' : 'Incident mode', currentStage === 'rerouted' ? 'Driver route changed due to Punjab flood' : 'Punjab flood active. Allocation priorities elevated.', 'var(--risk)');
+            addSignal('Punjab flood', currentStage === 'rerouted' ? 'Driver route changed and warehouse notified' : 'HQ activated incident mode across all nodes', 'var(--risk)');
+            if (typeof syncPunjabFloodStage === 'function') syncPunjabFloodStage(currentStage);
+          } else if (status === 'cleared') {
+            setHqState('Normal', 'Punjab flood incident cleared by HQ', 'var(--ok)');
+            addSignal('Punjab flood', 'Incident mode cleared', 'var(--ok)');
+            if (typeof syncPunjabFloodStage === 'function') syncPunjabFloodStage('cleared');
+          }
         });
       }
 

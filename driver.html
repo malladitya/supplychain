@@ -179,10 +179,18 @@
     <header class="driver-header">
       <div>
         <h2 style="font-size: 1.2rem;">Fleet Unit #710</h2>
-        <p style="color: var(--muted); font-size: 0.9rem;">Central Corridor · Delhi → Lucknow</p>
+        <p style="color: var(--muted); font-size: 0.9rem;">Punjab Mission · Agra → Amritsar</p>
       </div>
       <button onclick="logout()" class="btn btn-small btn-ghost" style="cursor: pointer;">Logout</button>
     </header>
+
+    <div id="incidentBanner" style="display:none; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; padding:0.8rem 1rem; border-radius:14px; border:1px solid rgba(255,107,107,0.45); background:rgba(255,107,107,0.12); color:var(--text);">
+      <div>
+        <strong data-incident-title>Incident Active</strong>
+        <div data-incident-detail style="font-size:0.9rem; color:var(--muted);">Waiting for incident update</div>
+      </div>
+      <div style="font-size:0.85rem; color:var(--warn); font-weight:700;">Driver sync</div>
+    </div>
 
     <div class="driver-status">
       <p class="eyebrow">Current Route Chaos Score</p>
@@ -233,16 +241,16 @@
       <h3 style="margin-bottom: 1rem;">Active Manifest: Medical Supplies</h3>
       <div class="route-timeline">
         <div class="timeline-step">
-          <strong>Origin: North Hub</strong>
-          <p style="color:var(--muted); font-size:0.85rem;">Departed 08:00 AM · New Delhi</p>
+          <strong>Origin: Agra Logistics Node</strong>
+          <p style="color:var(--muted); font-size:0.85rem;">Departed 08:00 AM · Agra</p>
         </div>
         <div class="timeline-step" id="checkpointStep">
-          <strong>Checkpoint: Agra Highway 9</strong>
-          <p style="color:var(--muted); font-size:0.85rem;">ETA 10:15 AM</p>
+          <strong>X Route: Chandigarh → Ludhiana</strong>
+          <p style="color:var(--muted); font-size:0.85rem;">ETA 11:20 AM</p>
         </div>
         <div class="timeline-step" style="margin-bottom:0;">
-          <strong>Dest: City Hospital</strong>
-          <p style="color:var(--muted); font-size:0.85rem;">ETA 11:30 AM</p>
+          <strong>Dest: Punjab Relief Hub</strong>
+          <p style="color:var(--muted); font-size:0.85rem;">ETA 12:40 PM · Amritsar</p>
         </div>
       </div>
     </div>
@@ -336,6 +344,17 @@
 
     refreshDriverRouteStatus();
 
+    const restoreIncidentState = () => {
+      if (typeof getNSCNSIncidentState !== 'function') return;
+      const state = getNSCNSIncidentState();
+      if (state && state.incident === 'punjab_flood' && state.status === 'active') {
+        setHqDriverSync('Incident mode', 'Punjab flood active. Routing advisory enabled.', 'var(--risk)');
+        if (typeof syncPunjabFloodStage === 'function') syncPunjabFloodStage(state.stage || 'enroute');
+      }
+    };
+
+    restoreIncidentState();
+
     if (typeof onMapEvent === 'function' && typeof EVT !== 'undefined') {
       onMapEvent(EVT.SYSTEM_HEARTBEAT, ({ tone, detail }) => {
         setHeartbeat(tone || 'Syncing', detail || 'Awaiting global state', tone === 'Critical' ? 'var(--risk)' : tone === 'Watch' ? 'var(--warn)' : 'var(--ok)');
@@ -366,6 +385,29 @@
       onMapEvent(EVT.DRIVER_DELIVERED, ({ unit, location }) => {
         setHqDriverSync('Delivered', `${unit} reached ${location}`, 'var(--ok)');
         addDriverSignal('Delivery confirmed', `${unit} reached ${location}`, 'var(--ok)');
+      });
+
+      onMapEvent(EVT.INCIDENT_MODE, ({ incident, status, stage }) => {
+        if (incident !== 'punjab_flood') return;
+
+        if (status === 'active') {
+          const currentStage = stage || 'enroute';
+          setHqDriverSync(currentStage === 'rerouted' ? 'Route changed' : 'Incident mode', currentStage === 'rerouted' ? 'Flood hit Punjab. Route changed to bypass the flooded zone.' : 'Punjab flood active. Routing advisory enabled.', 'var(--risk)');
+          addDriverSignal('Punjab flood', currentStage === 'rerouted' ? 'HQ changed route from X to Y due to flood' : 'National incident mode activated by HQ', 'var(--risk)');
+          if (typeof syncPunjabFloodStage === 'function') syncPunjabFloodStage(currentStage);
+          if (typeof _driverNotify === 'function') {
+            _driverNotify(currentStage === 'rerouted'
+              ? '🌊 HQ alert: Punjab flood detected. Route switched from X to Y bypass.'
+              : '🌊 Punjab flood incident active. Stay ready for reroute instructions.');
+          }
+        } else if (status === 'cleared') {
+          setHqDriverSync('Normal', 'Punjab flood incident cleared by HQ.', 'var(--ok)');
+          addDriverSignal('Punjab flood', 'Incident mode cleared', 'var(--ok)');
+          if (typeof syncPunjabFloodStage === 'function') syncPunjabFloodStage('cleared');
+          if (typeof _driverNotify === 'function') {
+            _driverNotify('✅ Punjab flood incident cleared. Standard routing resumed.');
+          }
+        }
       });
     }
 
@@ -399,12 +441,12 @@
     window.addEventListener('auto_rerouted', () => _applyRerouteUI());
 
     function _applyRerouteUI() {
-      rerouteAlert.innerHTML = `<p style="color:var(--ok); font-weight:600;">🤖 AI Rerouted! Jhansi bypass activated.</p>`;
+      rerouteAlert.innerHTML = `<p style="color:var(--ok); font-weight:600;">🤖 AI Rerouted! Y Route via Pathankot activated.</p>`;
 
       // Update route card checkpoint
       if (checkpointStep) {
-        checkpointStep.querySelector('strong').textContent = 'Bypass: Jhansi → Allahabad';
-        checkpointStep.querySelector('p').textContent = 'ETA revised · 12:00 PM (safer lane)';
+        checkpointStep.querySelector('strong').textContent = 'Y Route: Chandigarh → Pathankot';
+        checkpointStep.querySelector('p').textContent = 'ETA revised · 01:05 PM (flood bypass)';
       }
 
       setTimeout(() => {

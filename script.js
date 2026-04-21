@@ -1311,7 +1311,7 @@ const openLoginBtnSecondary = document.getElementById("openLoginBtnSecondary");
 const closeLoginBtn = document.getElementById("closeLoginBtn");
 const loginModal = document.getElementById("loginModal");
 const loginSubmitBtn = document.getElementById("loginSubmitBtn");
-const loginEmail = document.getElementById("loginEmail");
+const loginUsername = document.getElementById("loginEmail");
 const loginPassword = document.getElementById("loginPassword");
 const loginRole = document.getElementById("loginRole");
 const loginError = document.getElementById("loginError");
@@ -1360,35 +1360,55 @@ if (closeLoginBtn && loginModal) {
 if (loginSubmitBtn) {
   loginSubmitBtn.addEventListener("click", (e) => {
     e.preventDefault();
-    if (!loginEmail.value || !loginPassword.value) {
+    if (!loginUsername.value || !loginPassword.value) {
       if(loginError) {
         loginError.style.display = "inline-block";
-        loginError.textContent = "Please provide email and password.";
+        loginError.textContent = "Please provide username and password.";
       }
       return;
     }
 
     if(loginError) loginError.style.display = "none";
     loginSubmitBtn.textContent = "Authenticating...";
-    
-    setTimeout(() => {
-      const selectedRole = loginRole.value;
-      // In a real app, you'd verify credentials here.
-      // For this prototype, we'll simulate a successful login.
-      sessionStorage.setItem('nscns_auth', JSON.stringify({
-        email: loginEmail.value,
-        role: selectedRole,
-        time: new Date().toISOString()
-      }));
 
-      if (selectedRole === "hq") {
-        window.location.href = "hq.html";
-      } else if (selectedRole === "warehouse") {
-        window.location.href = "warehouse.html";
-      } else {
-        window.location.href = "driver.html";
+    const selectedRole = loginRole ? loginRole.value : "hq";
+    const validate = typeof window.validateNSCNSCredentials === "function"
+      ? window.validateNSCNSCredentials
+      : null;
+
+    if (!validate) {
+      if (loginError) {
+        loginError.style.display = "inline-block";
+        loginError.textContent = "Authentication engine not loaded.";
       }
-    }, 800);
+      loginSubmitBtn.textContent = "Authenticate ->";
+      return;
+    }
+
+    const result = validate(loginUsername.value, loginPassword.value, selectedRole);
+    if (!result.ok) {
+      if (loginError) {
+        loginError.style.display = "inline-block";
+        loginError.textContent = result.reason || "Invalid credentials.";
+      }
+      loginSubmitBtn.textContent = "Authenticate ->";
+      return;
+    }
+
+    const setSession = typeof window.setNSCNSUserSession === "function"
+      ? window.setNSCNSUserSession
+      : null;
+
+    if (setSession) {
+      setSession({
+        username: result.username,
+        role: result.role,
+        label: result.label,
+        time: new Date().toISOString(),
+      });
+    }
+
+    window.location.href = result.redirect;
   });
 }
 

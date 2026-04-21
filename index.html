@@ -251,12 +251,12 @@
       <button class="modal-close" id="closeLoginBtn" aria-label="Close modal">&times;</button>
       <div class="modal-header">
         <h2 id="modalTitle">Access Control Center</h2>
-        <p style="color: var(--muted); margin-top: 0.5rem; font-size: 0.95rem;">Select your operational role</p>
+        <p style="color: var(--muted); margin-top: 0.5rem; font-size: 0.95rem;">Use role-based username and password</p>
       </div>
       <div class="modal-form">
         <div class="field-group">
-          <label for="loginEmail">Email ID</label>
-          <input type="email" id="loginEmail" placeholder="officer@nscns.example" class="form-input" />
+          <label for="loginEmail">Username</label>
+          <input type="text" id="loginEmail" placeholder="Enter username" class="form-input" />
         </div>
         <div class="field-group">
           <label for="loginPassword">Password</label>
@@ -276,6 +276,12 @@
         <div style="text-align: center; margin-top: 1rem;">
           <small id="loginError" style="color: var(--risk); display: none;">Invalid credentials</small>
         </div>
+        <div style="margin-top: 1rem; padding: 0.8rem; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; background: rgba(255,255,255,0.03); color: var(--muted); font-size: 0.82rem; line-height: 1.5;">
+          <strong style="color: var(--text); display: block; margin-bottom: 0.3rem;">Demo Credentials</strong>
+          HQ: <span style="color: var(--text);">hqadmin / HQ@123</span><br>
+          Warehouse: <span style="color: var(--text);">warehousemgr / WH@123</span><br>
+          Driver: <span style="color: var(--text);">driver710 / DRV@123</span>
+        </div>
       </div>
     </div>
   </div>
@@ -289,6 +295,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
+  <script src="auth-check.js"></script>
   <script src="events.js"></script>
   <script src="features.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

@@ -33,6 +33,22 @@ const ROUTE_BYPASS_FALLBACK = [
   [26.8467, 80.9462],  // Lucknow
 ];
 
+const PUNJAB_ROUTE_MAIN = [
+  [27.1767, 78.0081], // Agra (start)
+  [28.4595, 77.0266], // Gurugram corridor
+  [30.7333, 76.7794], // Chandigarh
+  [30.9010, 75.8573], // Ludhiana
+  [31.6340, 74.8723], // Amritsar (destination)
+];
+
+const PUNJAB_ROUTE_BYPASS = [
+  [27.1767, 78.0081], // Agra (start)
+  [28.9845, 77.7064], // Karnal corridor
+  [30.7333, 76.7794], // Chandigarh
+  [32.2643, 75.6492], // Pathankot safe pass
+  [31.6340, 74.8723], // Amritsar
+];
+
 let ROUTE_MAIN = [...ROUTE_MAIN_FALLBACK];
 let ROUTE_BYPASS = [...ROUTE_BYPASS_FALLBACK];
 
@@ -86,6 +102,7 @@ const _routeMetrics = {
   main: null,
   bypass: null,
 };
+let _routeMode = "default";
 const _routeStatus = {
   initialized: false,
   usingRealMain: false,
@@ -138,6 +155,75 @@ function _estimateRouteMetrics(route) {
     durationMin: Number(((distanceKm / avgSpeedKph) * 60).toFixed(0)),
     avgSpeedKph,
   };
+}
+
+function _setRouteSet(mainRoute, bypassRoute, mode = "custom") {
+  if (Array.isArray(mainRoute) && mainRoute.length >= 2) {
+    ROUTE_MAIN = mainRoute.map((p) => [Number(p[0]), Number(p[1])]);
+    _routeMetrics.main = _estimateRouteMetrics(ROUTE_MAIN);
+  }
+  if (Array.isArray(bypassRoute) && bypassRoute.length >= 2) {
+    ROUTE_BYPASS = bypassRoute.map((p) => [Number(p[0]), Number(p[1])]);
+    _routeMetrics.bypass = _estimateRouteMetrics(ROUTE_BYPASS);
+  }
+  _routeMode = mode;
+}
+
+function _refreshRouteLayers() {
+  if (nationalMap && natDriverRoute) {
+    natDriverRoute.setLatLngs(ROUTE_MAIN);
+    if (natDriverDot) natDriverDot.setLatLng(_routePoint(ROUTE_MAIN, 0.45) || ROUTE_MAIN[0]);
+  }
+  if (driverMap && driverRouteLine) {
+    driverRouteLine.setLatLngs(ROUTE_MAIN);
+    if (driverMarker) driverMarker.setLatLng(_routePoint(ROUTE_MAIN, 0.45) || ROUTE_MAIN[0]);
+    driverMap.fitBounds(driverRouteLine.getBounds(), { padding: [40, 40] });
+  }
+  if (warehouseMap && whDriverOverlay) {
+    whDriverOverlay.setLatLngs(ROUTE_MAIN);
+  }
+}
+
+function setPunjabDemoRoute() {
+  _setRouteSet(PUNJAB_ROUTE_MAIN, PUNJAB_ROUTE_BYPASS, "punjab-demo");
+  _refreshRouteLayers();
+  return getRouteStatus();
+}
+
+function setFloodBypassRoute() {
+  _setRouteSet(PUNJAB_ROUTE_MAIN, PUNJAB_ROUTE_BYPASS, "punjab-demo-flood");
+  _refreshRouteLayers();
+  return getRouteStatus();
+}
+
+function restoreDefaultRoutes() {
+  _setRouteSet(ROUTE_MAIN_FALLBACK, ROUTE_BYPASS_FALLBACK, "default");
+  _refreshRouteLayers();
+  return getRouteStatus();
+}
+
+function syncPunjabFloodStage(stage = 'enroute') {
+  if (stage === 'cleared') {
+    restoreDefaultRoutes();
+    clearIncidentMode();
+    return getRouteStatus();
+  }
+
+  if (stage === 'rerouted' || stage === 'flood') {
+    setFloodBypassRoute();
+  } else {
+    setPunjabDemoRoute();
+  }
+
+  if (stage === 'flood') {
+    _setIncidentUi('Active', 'Punjab flood detected. Driver route changed and warehouse notified.');
+  } else if (stage === 'rerouted') {
+    _setIncidentUi('Active', 'Flood hit Punjab. Driver route changed to bypass the flooded zone.');
+  } else {
+    _setIncidentUi('Active', 'Driver is moving through the Punjab corridor. Stand by for flood alert.');
+  }
+
+  return getRouteStatus();
 }
 
 async function _fetchOsrmRouteFromBase(baseUrl, waypoints) {
@@ -217,6 +303,27 @@ async function _fetchOrsRoute(waypoints) {
 
 async function loadRealRoutes() {
   if (_realRoutesPromise) return _realRoutesPromise;
+
+  // Keep the Punjab demo route if an incident is active.
+  const incidentState = typeof getNSCNSIncidentState === 'function' ? getNSCNSIncidentState() : null;
+  if (incidentState && incidentState.incident === 'punjab_flood') {
+    _setRouteSet(PUNJAB_ROUTE_MAIN, PUNJAB_ROUTE_BYPASS, incidentState.status === 'active' ? 'punjab-demo-active' : 'punjab-demo');
+    _routeStatus.initialized = true;
+    _routeStatus.usingRealMain = false;
+    _routeStatus.usingRealBypass = false;
+    _routeStatus.providerMain = 'Punjab Demo';
+    _routeStatus.providerBypass = 'Punjab Demo';
+    _routeStatus.error = null;
+    _realRoutesPromise = Promise.resolve({
+      main: ROUTE_MAIN,
+      bypass: ROUTE_BYPASS,
+      usingRealMain: false,
+      usingRealBypass: false,
+      providerMain: 'Punjab Demo',
+      providerBypass: 'Punjab Demo',
+    });
+    return _realRoutesPromise;
+  }
 
   // Hard guarantee mode: if local route snapshot exists, use it immediately.
   if (ROUTE_MAIN_SNAPSHOT.length > 20 || ROUTE_BYPASS_SNAPSHOT.length > 20) {
@@ -341,6 +448,7 @@ function getRouteStatus() {
     bypassPoints: ROUTE_BYPASS.length,
     mainMetrics: _routeMetrics.main,
     bypassMetrics: _routeMetrics.bypass,
+    routeMode: _routeMode,
   };
 }
 
@@ -354,6 +462,33 @@ function _scoreRadius(s) { return 25000 + (s / 100) * 30000; }
 
 const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const TILE_OPT = { attribution: '&copy; OSM &copy; CARTO', subdomains: "abcd", maxZoom: 19 };
+
+function addMapLegend(map, title, items, position = "bottomright") {
+  if (!map || !Array.isArray(items) || !items.length) return;
+
+  const legend = L.control({ position });
+  legend.onAdd = function onAdd() {
+    const div = L.DomUtil.create("div", "nscns-map-legend");
+    const rows = items
+      .map((item) => {
+        const symbol = item.symbol || "";
+        const label = item.label || "";
+        return `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;line-height:1.2;">${symbol}<span style="color:#dbe7ef;font-size:11px;">${label}</span></div>`;
+      })
+      .join("");
+
+    div.innerHTML = `
+      <div style="min-width:200px;max-width:240px;background:rgba(7,16,24,0.92);border:1px solid rgba(255,255,255,0.18);border-radius:10px;padding:10px 12px;backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(0,0,0,0.3);">
+        <div style="color:#ffffff;font-weight:700;font-size:12px;letter-spacing:0.02em;">${title}</div>
+        ${rows}
+      </div>
+    `;
+    return div;
+  };
+
+  legend.addTo(map);
+  return legend;
+}
 
 
 // ════════════════════════════════════════════════════════════
@@ -449,6 +584,21 @@ function initNationalMap() {
     if (natDriverRoute) natDriverRoute.setLatLngs(main);
     if (natDriverDot) natDriverDot.setLatLng(_routePoint(main, 0.45) || main[0]);
   });
+
+  addMapLegend(
+    nationalMap,
+    "Map Meaning",
+    [
+      { symbol: '<span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:#80ed99;border:1px solid #fff;"></span>', label: "Low risk region point" },
+      { symbol: '<span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:#ffd166;border:1px solid #fff;"></span>', label: "Watch risk region point" },
+      { symbol: '<span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:#ff6b6b;border:1px solid #fff;"></span>', label: "High risk region point" },
+      { symbol: '<span style="width:18px;height:3px;display:inline-block;background:rgba(255,209,102,0.8);"></span>', label: "Inter-region supply link" },
+      { symbol: '<span style="width:18px;height:3px;display:inline-block;background:rgba(128,237,153,0.95);"></span>', label: "Active fleet route" },
+      { symbol: '<span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:#80ed99;border:2px solid #fff;"></span>', label: "Fleet current location" },
+      { symbol: '<span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:rgba(255,107,107,0.6);border:1px dashed #ff6b6b;"></span>', label: "Congestion or flood alert zone" },
+    ],
+    "bottomleft"
+  );
 }
 
 function updateNationalMap(regionViews, primaryId) {
@@ -512,11 +662,11 @@ function initDriverMap() {
 
   // Origin pin
   L.circleMarker(ROUTE_MAIN[0], { radius: 8, color: "#fff", fillColor: "#80ed99", fillOpacity: 1, weight: 2 })
-    .addTo(driverMap).bindPopup("<b>🏭 Origin: North Hub</b><br>New Delhi");
+    .addTo(driverMap).bindPopup("<b>🏭 Origin: Agra Logistics Node</b><br>Agra");
 
   // Destination pin
   L.circleMarker(ROUTE_MAIN[ROUTE_MAIN.length - 1], { radius: 8, color: "#fff", fillColor: "#ffd166", fillOpacity: 1, weight: 2 })
-    .addTo(driverMap).bindPopup("<b>🏥 Destination: City Hospital</b><br>Lucknow");
+    .addTo(driverMap).bindPopup("<b>🏥 Destination: Punjab Relief Hub</b><br>Amritsar");
 
   // Truck marker with pulsing ring
   driverMarker = L.marker(_routePoint(ROUTE_MAIN, 0.45) || ROUTE_MAIN[0], {
@@ -524,7 +674,7 @@ function initDriverMap() {
       html: `<div class="driver-map-pin"><div class="driver-map-pin-ring"></div></div>`,
       iconSize: [24,24], iconAnchor: [12,12], className: "",
     }),
-  }).addTo(driverMap).bindPopup("<b>Fleet Unit #710</b><br>📍 Agra Checkpoint · Highway 9");
+  }).addTo(driverMap).bindPopup("<b>Fleet Unit #710</b><br>📍 En route to Punjab corridor");
 
   driverMap.fitBounds(driverRouteLine.getBounds(), { padding: [40, 40] });
 
@@ -545,6 +695,20 @@ function initDriverMap() {
     if (driverMarker) driverMarker.setLatLng(_routePoint(main, 0.45) || main[0]);
     driverMap.fitBounds(driverRouteLine.getBounds(), { padding: [40, 40] });
   });
+
+  addMapLegend(
+    driverMap,
+    "Route Legend",
+    [
+      { symbol: '<span style="width:18px;height:3px;display:inline-block;background:#80ed99;"></span>', label: "Normal route / reroute path" },
+      { symbol: '<span style="width:18px;height:3px;display:inline-block;background:#ff6b6b;"></span>', label: "Congested route segment" },
+      { symbol: '<span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:#80ed99;border:2px solid #fff;"></span>', label: "Origin point (North Hub)" },
+      { symbol: '<span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:#ffd166;border:2px solid #fff;"></span>', label: "Destination point (Hospital)" },
+      { symbol: '<span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:#ff6b6b;border:1px dashed #fff;"></span>', label: "Live congestion warning zone" },
+      { symbol: '<span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:#80ed99;box-shadow:0 0 8px rgba(128,237,153,0.9);"></span>', label: "Fleet unit current position" },
+    ],
+    "bottomleft"
+  );
 }
 
 /**
@@ -556,7 +720,7 @@ function triggerCongestionOnMap() {
 
   // Show red danger zone
   if (driverCongZone) driverCongZone.remove();
-  driverCongZone = L.circle([27.1767, 78.0081], {
+  driverCongZone = L.circle([30.9010, 75.8573], {
     color: "#ff6b6b", fillColor: "#ff6b6b", fillOpacity: 0.28,
     radius: 22000, weight: 2, dashArray: "6 6",
   }).addTo(driverMap).bindPopup("⚠️ <b>Congestion Zone</b><br>Reporting to National HQ…").openPopup();
@@ -564,7 +728,7 @@ function triggerCongestionOnMap() {
   if (driverRouteLine) driverRouteLine.setStyle({ color: "#ff6b6b" });
 
   // Emit to national + warehouse maps
-  emitMapEvent(EVT.DRIVER_CONGESTION, { lat: 27.1767, lng: 78.0081 });
+  emitMapEvent(EVT.DRIVER_CONGESTION, { lat: 30.9010, lng: 75.8573 });
 
   // ── Auto-reroute countdown ──────────────────────────────
   let count = 5;
@@ -896,6 +1060,19 @@ function initWarehouseMap() {
     if (!warehouseMap) return;
     if (whDriverOverlay) whDriverOverlay.setLatLngs(main);
   });
+
+  addMapLegend(
+    warehouseMap,
+    "Supply Legend",
+    [
+      { symbol: '<span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:#ffd166;border:2px solid #fff;"></span>', label: "Warehouse command node" },
+      { symbol: '<span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:#80ed99;border:2px solid #fff;"></span>', label: "Supply source point" },
+      { symbol: '<span style="width:18px;height:3px;display:inline-block;background:rgba(128,237,153,0.7);"></span>', label: "Inbound supply corridor" },
+      { symbol: '<span style="width:18px;height:3px;display:inline-block;background:rgba(128,237,153,0.9);"></span>', label: "Driver route overlay" },
+      { symbol: '<span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:rgba(255,107,107,0.6);border:1px dashed #ff6b6b;"></span>', label: "Delay or congestion alert zone" },
+    ],
+    "bottomleft"
+  );
 }
 
 /**
@@ -922,4 +1099,124 @@ function highlightWarehouseTransfer() {
 
   // Broadcast to National HQ + Driver
   emitMapEvent(EVT.WH_TRANSFER_APPROVED, { from: "south", to: "central" });
+}
+
+// ─── Shared Incident Mode (all maps) ───────────────────────
+let _incidentLayers = [];
+
+function _trackIncidentLayer(layer, map) {
+  if (!layer || !map) return;
+  _incidentLayers.push({ layer, map });
+}
+
+function _setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function _setColor(id, color) {
+  const el = document.getElementById(id);
+  if (el) el.style.color = color;
+}
+
+function _setIncidentBanner(state, detail) {
+  const banner = document.getElementById('incidentBanner');
+  if (!banner) return;
+
+  const titleEl = banner.querySelector('[data-incident-title]');
+  const detailEl = banner.querySelector('[data-incident-detail]');
+
+  if (titleEl) titleEl.textContent = state;
+  if (detailEl) detailEl.textContent = detail;
+
+  banner.dataset.state = state === 'Active' ? 'active' : state === 'Cleared' ? 'cleared' : 'default';
+  banner.style.display = state === 'Cleared' ? 'none' : 'flex';
+}
+
+function _setIncidentUi(state, detail) {
+  const isActive = state === 'Active';
+  const title = isActive ? 'Incident mode' : 'Normal';
+  const tone = isActive ? 'var(--risk)' : 'var(--ok)';
+
+  _setIncidentBanner(state, detail);
+
+  _setText('routeDataStatus', isActive ? 'Punjab flood incident overlays active' : 'Route provider active');
+  _setText('routeSyncState', isActive ? 'Incident' : 'Connected');
+  _setText('routeSyncDetail', isActive ? 'Punjab flood routing advisory is active' : 'Route provider health and travel time');
+  _setColor('routeSyncState', tone);
+
+  _setText('driverRouteState', isActive ? 'Incident' : 'Live');
+  _setText('driverRouteDetail', isActive ? 'Punjab flood alert is synchronizing reroute guidance' : 'Route provider health and travel time');
+  _setColor('driverRouteState', tone);
+
+  _setText('hqSyncState', isActive ? title : 'Listening');
+  _setText('hqSyncDetail', isActive ? detail : 'Waiting for scenario updates');
+  _setColor('hqSyncState', tone);
+
+  _setText('warehouseHeartbeatState', isActive ? 'Incident' : 'Syncing');
+  _setText('warehouseHeartbeatDetail', isActive ? 'Punjab flood mode active across all dashboards' : 'Awaiting global state');
+  _setColor('warehouseHeartbeatState', tone);
+
+  _setText('driverHeartbeatState', isActive ? 'Incident' : 'Syncing');
+  _setText('driverHeartbeatDetail', isActive ? 'Punjab flood mode active across all dashboards' : 'Awaiting global state');
+  _setColor('driverHeartbeatState', tone);
+
+  _setText('heartbeatStatus', isActive ? 'Incident' : 'Syncing');
+  _setText('heartbeatDetail', isActive ? 'Punjab flood incident synchronized' : 'Awaiting shared state');
+  _setColor('heartbeatStatus', tone);
+}
+
+function clearIncidentMode() {
+  _incidentLayers.forEach(({ layer, map }) => {
+    try { map.removeLayer(layer); } catch (_) {}
+  });
+  _incidentLayers = [];
+
+  restoreDefaultRoutes();
+
+  if (driverRouteLine) {
+    driverRouteLine.setStyle({ color: "#80ed99", weight: 4, lineCap: "round", lineJoin: "round" });
+  }
+  if (whDriverOverlay) {
+    whDriverOverlay.setStyle({ color: "rgba(128,237,153,0.85)", weight: 2.5 });
+  }
+
+  _setIncidentUi('Cleared', 'Punjab flood incident cleared. Standard routing restored across all pages.');
+}
+
+function activatePunjabFloodMode() {
+  clearIncidentMode();
+  syncPunjabFloodStage('enroute');
+
+  if (nationalMap) {
+    const poly = L.polygon([
+      [32.6, 73.2], [32.6, 76.9], [29.7, 76.9], [29.7, 73.2],
+    ], {
+      color: "#ff6b6b", fillColor: "#ff6b6b", fillOpacity: 0.22, weight: 2, dashArray: "8 5",
+    }).addTo(nationalMap).bindPopup("🌊 <b>Punjab Flood Incident</b><br>National incident mode active");
+    _trackIncidentLayer(poly, nationalMap);
+  }
+
+  if (driverMap) {
+    const markerPos = driverMarker ? driverMarker.getLatLng() : [27.1767, 78.0081];
+    const zone = L.circle(markerPos, {
+      color: "#ffd166", fillColor: "#ffd166", fillOpacity: 0.18, radius: 25000, weight: 2, dashArray: "6 6",
+    }).addTo(driverMap).bindPopup("⚠️ <b>Punjab Flood Advisory</b><br>Expect national reroute pressure");
+    _trackIncidentLayer(zone, driverMap);
+
+    if (driverRouteLine) {
+      driverRouteLine.setStyle({ color: "#ffd166", weight: 4, lineCap: "round", lineJoin: "round" });
+    }
+  }
+
+  if (warehouseMap) {
+    const whZone = L.circle(WH_POS, {
+      color: "#ffd166", fillColor: "#ffd166", fillOpacity: 0.15, radius: 140000, weight: 2, dashArray: "6 6",
+    }).addTo(warehouseMap).bindPopup("⚠️ <b>Punjab Flood Incident Mode</b><br>Warehouse allocations may be reprioritized");
+    _trackIncidentLayer(whZone, warehouseMap);
+
+    if (whDriverOverlay) {
+      whDriverOverlay.setStyle({ color: "rgba(255,209,102,0.9)", weight: 2.8 });
+    }
+  }
 }
