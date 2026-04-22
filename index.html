@@ -16,10 +16,26 @@
   />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script>
+    // Apply theme immediately to prevent flashing
+    (function() {
+      var savedTheme = localStorage.getItem('tezflow-theme');
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
 </head>
 <body>
-  <div class="bg-shape bg-shape-1" aria-hidden="true" style="background: rgba(139, 168, 136, 0.12);"></div>
-  <div class="bg-shape bg-shape-2" aria-hidden="true" style="background: rgba(197, 160, 40, 0.08);"></div>
+  <!-- Quantum Mesh Background -->
+  <div class="quantum-mesh" aria-hidden="true">
+    <div class="mesh-blob blob-1"></div>
+    <div class="mesh-blob blob-2"></div>
+    <div class="mesh-blob blob-3"></div>
+  </div>
   <style>
     .hero {
       background-image: 
@@ -43,7 +59,11 @@
         <a href="#impact">Ecosystem</a>
         <a href="#roadmap">Scale</a>
       </nav>
-      <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+      <div class="header-actions" style="display: flex; gap: 0.8rem; align-items: center;">
+        <button class="theme-toggle" id="themeToggleBtn" aria-label="Toggle Theme" style="background: none; border: 1px solid var(--glass-border); color: var(--text-main); cursor: pointer; padding: 0.6rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+          <svg class="sun-icon" style="display: none; width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg class="moon-icon" style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
         <button class="btn btn-small" id="openLoginBtn">Terminal Access &rarr;</button>
         <button class="menu-toggle" id="menuToggle" aria-label="Open menu">
           <span></span>
@@ -65,144 +85,137 @@
     </div>
   </header>
 
-  <main>
-    <section id="home" class="hero section">
-      <div class="container hero-grid">
-        <div class="hero-copy reveal">
-          <p class="eyebrow" style="color: var(--secondary);">Velocity Intelligence Platform</p>
-          <h1 style="background: linear-gradient(to bottom right, #FFFFFF 40%, var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">TezFlow: Intelligent Supply Chain Dynamics</h1>
-          <p class="hero-lead">
-            Continuous resilience analytics and predictive risk orchestration. We synchronize your entire national network through an adaptive "Nature-Tech" ecosystem.
-          </p>
-          <div class="hero-actions">
-            <button class="btn" onclick="openLogin('hq')">Enter HQ Command</button>
-            <a class="btn btn-ghost" href="#features">Explore AI Systems</a>
+  <main class="container bento-grid">
+    <!-- HERO CELL -->
+    <section id="home" class="bento-cell span-8 row-4 glass-card reveal">
+      <div class="hero-copy">
+        <p class="eyebrow" style="color: var(--secondary);">Velocity Intelligence Platform</p>
+        <h1 style="background: linear-gradient(to bottom right, #FFFFFF 40%, var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">TezFlow: Intelligent Supply Chain Dynamics</h1>
+        <p class="hero-lead">
+          Continuous resilience analytics and predictive risk orchestration. We synchronize your entire national network through an adaptive "Nature-Tech" ecosystem.
+        </p>
+        <div class="hero-actions">
+          <button class="btn" onclick="openLogin('hq')">Enter HQ Command</button>
+          <a class="btn btn-ghost" href="#features">Explore AI Systems</a>
+        </div>
+        <ul class="hero-metrics">
+          <li>
+            <span class="metric-value">94.2%</span>
+            <span class="metric-label">Network Resilience</span>
+          </li>
+          <li>
+            <span class="metric-value">12ms</span>
+            <span class="metric-label">Node Latency</span>
+          </li>
+          <li>
+            <span class="metric-value">640+</span>
+            <span class="metric-label">Neural Nodes</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ENTROPY CELL -->
+    <aside class="bento-cell span-4 row-2 glass-card reveal">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+        <div>
+          <h2 style="font-size: 1.1rem; margin-bottom: 0.25rem;">Chaos Core Terminal</h2>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">Regional stress telemetry</p>
+        </div>
+        <span style="background: rgba(249,65,68,0.1); color: var(--status-risk); font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid rgba(249,65,68,0.2);">CRITICAL</span>
+      </div>
+      
+      <div class="score-panel" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); position: relative; overflow: hidden; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--status-risk), transparent);"></div>
+        <p class="score-label">Regional Entropy Index</p>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+          <p class="score-value" id="heroChaosScore" style="color: var(--status-risk);">62</p>
+          <span style="font-size: 1.2rem; color: var(--text-muted); font-weight: 300;">/100</span>
+        </div>
+        <p class="score-state" id="heroChaosState" style="color: var(--status-risk); letter-spacing: 0.05em; font-size: 0.8rem; font-weight: bold;">STRESS DETECTED</p>
+        
+        <div style="margin-top: 1rem;">
+          <div style="display:flex; justify-content:space-between; font-size: 0.7rem; margin-bottom: 0.4rem; color: var(--text-muted);">
+            <label for="stressRange">Modulation</label>
+            <span id="rangeVal">62%</span>
           </div>
-          <ul class="hero-metrics">
-            <li>
-              <span class="metric-value">94.2%</span>
-              <span class="metric-label">Network Resilience</span>
-            </li>
-            <li>
-              <span class="metric-value">12ms</span>
-              <span class="metric-label">Node Latency</span>
-            </li>
-            <li>
-              <span class="metric-value">640+</span>
-              <span class="metric-label">Neural Nodes</span>
-            </li>
-          </ul>
+          <input type="range" id="stressRange" min="0" max="100" value="62" style="height: 4px; border-radius: 2px;" title="Adjust Chaos Score" />
         </div>
-
-        <aside class="hero-panel reveal">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-            <div>
-              <h2 style="font-size: 1.1rem; margin-bottom: 0.25rem;">Chaos Core Terminal</h2>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">Real-time regional stress telemetry</p>
-            </div>
-            <span style="background: rgba(249,65,68,0.1); color: var(--status-risk); font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 4px; border: 1px solid rgba(249,65,68,0.2);">MISSION CRITICAL</span>
-          </div>
-          
-          <div class="score-panel" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); position: relative; overflow: hidden;">
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--status-risk), transparent);"></div>
-            <p class="score-label">Regional Entropy Index</p>
-            <div style="display: flex; align-items: baseline; gap: 0.5rem;">
-              <p class="score-value" id="heroChaosScore" style="color: var(--status-risk);">62</p>
-              <span style="font-size: 1.5rem; color: var(--text-muted); font-weight: 300;">/100</span>
-            </div>
-            <p class="score-state" id="heroChaosState" style="color: var(--status-risk); letter-spacing: 0.05em; font-size: 0.9rem; font-weight: bold;">CRITICAL STRESS DETECTED</p>
-            
-            <div style="margin-top: 1.5rem;">
-              <div style="display:flex; justify-content:space-between; font-size: 0.75rem; margin-bottom: 0.5rem; color: var(--text-muted);">
-                <label for="stressRange">Scenario Stress Modulation</label>
-                <span id="rangeVal">62%</span>
-              </div>
-              <input type="range" id="stressRange" min="0" max="100" value="62" style="height: 4px; border-radius: 2px;" title="Adjust Chaos Score Scenario" />
-              <div class="range-legend" style="margin-top: 0.5rem;">
-                <span>Equilibrium</span>
-                <span>Cascade Failure</span>
-              </div>
-            </div>
-          </div>
-        </aside>
       </div>
-    </section>
+    </aside>
 
-    <section id="problem" class="section">
-      <div class="container">
-        <p class="eyebrow reveal">The Vision</p>
-        <h2 class="section-title reveal">Current logistics networks are fragmented and reactive</h2>
-        <div class="problem-grid">
-          <article class="card reveal">
-            <h3>Data Silos</h3>
-            <p>Departments and stakeholders operate in isolation, limiting unified action.</p>
-          </article>
-          <article class="card reveal">
-            <h3>Slow Decisions</h3>
-            <p>Manual workflows delay response to shortages, congestion, and route failures.</p>
-          </article>
-          <article class="card reveal">
-            <h3>Low Predictability</h3>
-            <p>Disruptions are addressed after impact instead of being prevented in advance.</p>
-          </article>
-          <article class="card reveal">
-            <h3>Emergency Gaps</h3>
-            <p>Disaster response often lacks synchronized logistics for critical goods delivery.</p>
-          </article>
+    <!-- TOP 6 FEATURES -->
+    <article class="bento-cell span-4 row-2 glass-card reveal tilt-card" id="features">
+      <div class="eyebrow" style="background: var(--primary-glow); color: var(--primary);">01</div>
+      <h3 style="margin: 1rem 0 0.5rem;">Chaos Score Engine</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">Continuous risk scoring for every national logistics node with millisecond latency.</p>
+    </article>
+
+    <article class="bento-cell span-4 row-2 glass-card reveal tilt-card">
+      <div class="eyebrow" style="background: var(--primary-glow); color: var(--primary);">02</div>
+      <h3 style="margin: 1rem 0 0.5rem;">Self-Healing Ops</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">Autonomous rerouting and dynamic priority orchestration to bypass network failures.</p>
+    </article>
+
+    <article class="bento-cell span-4 row-2 glass-card reveal tilt-card">
+      <div class="eyebrow" style="background: var(--primary-glow); color: var(--primary);">03</div>
+      <h3 style="margin: 1rem 0 0.5rem;">Crisis Prediction</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">Deep learning models forecasting regional shortages of medicine and food 72 hours ahead.</p>
+    </article>
+
+    <article class="bento-cell span-4 row-2 glass-card reveal tilt-card">
+      <div class="eyebrow" style="background: var(--primary-glow); color: var(--primary);">04</div>
+      <h3 style="margin: 1rem 0 0.5rem;">Dynamic Allocation</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">Real-time rebalancing of critical stock between surplus and high-deficit zones.</p>
+    </article>
+
+    <article class="bento-cell span-4 row-2 glass-card reveal tilt-card">
+      <div class="eyebrow" style="background: var(--primary-glow); color: var(--primary);">05</div>
+      <h3 style="margin: 1rem 0 0.5rem;">Multi-Node AI</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">Distributed intelligence ensuring local decisions remain synchronized with national goals.</p>
+    </article>
+
+    <article class="bento-cell span-4 row-2 glass-card reveal tilt-card">
+      <div class="eyebrow" style="background: var(--primary-glow); color: var(--primary);">06</div>
+      <h3 style="margin: 1rem 0 0.5rem;">Emergency Mode</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">Instant state-wide activation of disaster-specific logistics and priority routing.</p>
+    </article>
+
+    <!-- SECONDARY NODES -->
+    <section class="bento-cell span-12 glass-card reveal" style="padding: 1.2rem 1.8rem;">
+      <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+        <span class="eyebrow">Peripheral Intelligence</span>
+        <div style="display: flex; gap: 2rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted);">
+          <span>// Simulator</span>
+          <span>// Event Aware</span>
+          <span>// Memory Lean</span>
+          <span>// Explainable AI</span>
+          <span>// Multi-Sector</span>
+          <span>// Offline Node</span>
+          <span>// Live Vis</span>
         </div>
       </div>
     </section>
 
-    <section id="features" class="section section-alt">
-      <div class="container">
-        <p class="eyebrow reveal">Neural Intelligence Stack</p>
-        <h2 class="section-title reveal">13 adaptive engines for an autonomous national network</h2>
-        <div class="feature-grid">
-          <article class="feature-card reveal"><h3>1. Chaos Score Engine</h3><p>Continuous risk scoring for every region.</p></article>
-          <article class="feature-card reveal"><h3>2. Self-Healing Operations</h3><p>Auto-rerouting and dynamic priority updates.</p></article>
-          <article class="feature-card reveal"><h3>3. Crisis Prediction</h3><p>Forecast shortages of food, medicine, and fuel.</p></article>
-          <article class="feature-card reveal"><h3>4. Dynamic Allocation</h3><p>Rebalance supply between surplus and deficit zones.</p></article>
-          <article class="feature-card reveal"><h3>5. Multi-Node AI</h3><p>Local decisions with national coordination.</p></article>
-          <article class="feature-card reveal"><h3>6. Emergency Mode</h3><p>Disaster-specific logistics prioritization.</p></article>
-          <article class="feature-card reveal"><h3>7. Policy Simulator</h3><p>Test policy outcomes before implementation.</p></article>
-          <article class="feature-card reveal"><h3>8. Event Awareness</h3><p>Adjust plans for festivals, elections, and spikes.</p></article>
-          <article class="feature-card reveal"><h3>9. Memory Learning</h3><p>Learn from past disruptions to avoid repeat failures.</p></article>
-          <article class="feature-card reveal"><h3>10. Explainable AI</h3><p>Transparent recommendations with clear reasoning.</p></article>
-          <article class="feature-card reveal"><h3>11. Public-Private Integration</h3><p>Unified intelligence across sectors.</p></article>
-          <article class="feature-card reveal"><h3>12. Offline-Aware Operations</h3><p>Reliable workflows in low-connectivity regions.</p></article>
-          <article class="feature-card reveal"><h3>13. Live Visualization</h3><p>Heatmaps of supply-demand dynamics in real time.</p></article>
-        </div>
-      </div>
-    </section>
+    <!-- TERMINAL ACCESS -->
+    <article class="bento-cell span-4 row-2 glass-card reveal">
+      <h3 style="margin-bottom: 0.8rem;">National HQ</h3>
+      <p style="font-size: 0.85rem; margin-bottom: 1.5rem;">Live national command with route intelligence and heartbeat synchronization.</p>
+      <button class="btn btn-small" onclick="openLogin('hq')" style="margin-top: auto;">Open Terminal &rarr;</button>
+    </article>
 
-    <section id="control-center" class="section control-section">
-      <div class="container">
-        <p class="eyebrow reveal">Operations Gateway</p>
-        <h2 class="section-title reveal">Choose a focused workspace instead of a crowded all-in-one screen</h2>
-        <div class="problem-grid">
-          <article class="card reveal">
-            <h3>National HQ</h3>
-            <p>Live national command with route intelligence, weather fusion, and heartbeat synchronization.</p>
-            <button class="btn" onclick="openLogin('hq')">Open HQ Command</button>
-          </article>
-          <article class="card reveal">
-            <h3>Warehouse Node</h3>
-            <p>Approve transfers, watch inbound dependencies, and track fleet impact on local stock posture.</p>
-            <button class="btn" onclick="openLogin('warehouse')">Open Warehouse Console</button>
-          </article>
-          <article class="card reveal">
-            <h3>Driver Node</h3>
-            <p>Report congestion, accept reroutes, and synchronize field execution with national plans.</p>
-            <button class="btn" onclick="openLogin('driver')">Open Driver Console</button>
-          </article>
-          <article class="card reveal">
-            <h3>Quick Login</h3>
-            <p>Use role-based authentication to jump directly into HQ, warehouse, or driver interface.</p>
-            <button class="btn" id="openLoginBtnSecondary" type="button">Login by Role</button>
-          </article>
-        </div>
-      </div>
-    </section>
+    <article class="bento-cell span-4 row-2 glass-card reveal">
+      <h3 style="margin-bottom: 0.8rem;">Warehouse Node</h3>
+      <p style="font-size: 0.85rem; margin-bottom: 1.5rem;">Approve transfers and track fleet impact on local stock posture.</p>
+      <button class="btn btn-small" onclick="openLogin('warehouse')" style="margin-top: auto;">Open Console &rarr;</button>
+    </article>
+
+    <article class="bento-cell span-4 row-2 glass-card reveal">
+      <h3 style="margin-bottom: 0.8rem;">Driver Node</h3>
+      <p style="font-size: 0.85rem; margin-bottom: 1.5rem;">Report congestion and synchronize with national plans.</p>
+      <button class="btn btn-small" onclick="openLogin('driver')" style="margin-top: auto;">Open Interface &rarr;</button>
+    </article>
+  </main>
 
     <section id="impact" class="section">
       <div class="container impact-grid">

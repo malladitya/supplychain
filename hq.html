@@ -108,11 +108,18 @@
     }
 
     .status-chip {
-      background: rgba(0,0,0,0.3);
+      background: var(--glass-bg);
       border: 1px solid var(--glass-border);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
       padding: 0.8rem;
       transition: all 0.3s ease;
+      backdrop-filter: blur(var(--glass-blur));
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .status-chip:hover {
+      border-color: var(--primary);
+      box-shadow: 0 0 15px var(--primary-glow);
     }
 
     .status-chip .status-label {
@@ -304,6 +311,18 @@
       }
     }
   </style>
+  <script>
+    // Apply theme immediately to prevent flashing
+    (function() {
+      var savedTheme = localStorage.getItem('tezflow-theme');
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
 </head>
 <body class="has-dashboard-footer">
   <div class="hq-shell">
@@ -313,6 +332,10 @@
         <span style="opacity:0.6; font-weight:400; margin-left:0.5rem; color: var(--text-main);">| HQ Command</span>
       </a>
       <div class="mobile-hide" style="display:flex; gap:0.6rem; align-items:center;">
+        <button class="theme-toggle" id="themeToggleBtn" aria-label="Toggle Theme" style="background: none; border: 1px solid var(--glass-border); color: var(--text-main); cursor: pointer; padding: 0.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); margin-right: 0.5rem;">
+          <svg class="sun-icon" style="display: none; width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg class="moon-icon" style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
         <a href="index.html" class="btn btn-small btn-ghost">Home</a>
         <a href="warehouse.html" class="btn btn-small btn-ghost">Warehouse</a>
         <a href="driver.html" class="btn btn-small btn-ghost">Driver</a>
@@ -332,7 +355,7 @@
       <div style="font-size:0.85rem; color:var(--warn); font-weight:700;">Cross-page sync enabled</div>
     </div>
 
-    <div class="hq-grid">
+    <div class="hq-grid reveal">
       <section class="hq-panel">
         <h1 class="hq-title">Command & Control Surface</h1>
         <p class="hq-sub">High-velocity supply chain orchestration and predictive risk analytics.</p>

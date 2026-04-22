@@ -1532,3 +1532,104 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+// --- Theme Management ---
+function initTheme() {
+  const themeToggleBtns = document.querySelectorAll('#themeToggleBtn');
+  const html = document.documentElement;
+  
+  const savedTheme = localStorage.getItem('tezflow-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  html.setAttribute('data-theme', savedTheme);
+  updateThemeIcons(savedTheme);
+
+  themeToggleBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const currentTheme = html.getAttribute('data-theme') || 'light';
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('tezflow-theme', newTheme);
+      updateThemeIcons(newTheme);
+    });
+  });
+}
+
+function updateThemeIcons(theme) {
+  const sunIcons = document.querySelectorAll('.sun-icon');
+  const moonIcons = document.querySelectorAll('.moon-icon');
+  
+  if (theme === 'dark') {
+    sunIcons.forEach(i => i.style.display = 'block');
+    moonIcons.forEach(i => i.style.display = 'none');
+  } else {
+    sunIcons.forEach(i => i.style.display = 'none');
+    moonIcons.forEach(i => i.style.display = 'block');
+  }
+}
+
+// --- Scroll Reveal Observer ---
+function initScrollReveal() {
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('active');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, observerOptions);
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+}
+
+// --- Premium Effects: Tilt & Quantum Mesh ---
+function initPremiumEffects() {
+  const tiltCards = document.querySelectorAll('.tilt-card');
+  const meshBlobs = document.querySelectorAll('.mesh-blob');
+
+  // Hardware-Grade Tilt Physics
+  tiltCards.forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      
+      const rotateX = (y - centerY) / 10;
+      const rotateY = -(x - centerX) / 10;
+      
+      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+    });
+
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
+    });
+  });
+
+  // Quantum Mesh Mouse Interaction (Subtle follow)
+  document.addEventListener('mousemove', (e) => {
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    meshBlobs.forEach((blob, index) => {
+      const speed = (index + 1) * 0.02;
+      const dx = (x - window.innerWidth / 2) * speed;
+      const dy = (y - window.innerHeight / 2) * speed;
+      
+      blob.style.transform = `translate(${dx}px, ${dy}px)`;
+    });
+  });
+}
+
+// Initialize on Load
+document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+  initScrollReveal();
+  initPremiumEffects();
+});
