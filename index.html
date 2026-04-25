@@ -282,42 +282,71 @@
 
   <!-- Login Modal -->
   <div class="modal-overlay" id="loginModal" aria-hidden="true">
-    <div class="modal-content" role="dialog" aria-labelledby="modalTitle">
-      <button class="modal-close" id="closeLoginBtn" aria-label="Close modal">&times;</button>
-      <div class="modal-header">
-        <h2 id="modalTitle">Access Control Center</h2>
-        <p style="color: var(--muted); margin-top: 0.5rem; font-size: 0.95rem;">Use role-based username and password</p>
+    <div class="modal-content tactical-modal" role="dialog" aria-labelledby="modalTitle">
+      <button class="modal-close tactical-close" id="closeLoginBtn" aria-label="Close modal">&times;</button>
+      <div class="modal-header tactical-header">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+          <h2 id="modalTitle">Access Control Center</h2>
+          <span class="tactical-badge">LVL_4_REQD</span>
+        </div>
+        <p>Use role-based username and password</p>
       </div>
-      <div class="modal-form">
+      <div class="modal-form tactical-form">
         <div class="field-group">
-          <label for="loginEmail">Username</label>
-          <input type="text" id="loginEmail" placeholder="Enter username" class="form-input" />
+          <label for="loginEmail">Operator ID</label>
+          <div class="tactical-input-wrapper">
+            <input type="text" id="loginEmail" placeholder="OPERATOR_XXXX" class="tactical-input" />
+            <div class="input-glow-line"></div>
+          </div>
         </div>
         <div class="field-group">
-          <label for="loginPassword">Password</label>
-          <input type="password" id="loginPassword" placeholder="••••••••" class="form-input" />
+          <label for="loginPassword">Security Cipher</label>
+          <div class="tactical-input-wrapper">
+            <input type="password" id="loginPassword" placeholder="••••••••••••" class="tactical-input" />
+            <div class="input-glow-line"></div>
+          </div>
         </div>
-        <div class="field-group">
-          <label for="loginRole">Clearance Level</label>
-          <select id="loginRole" class="form-input">
-            <option value="hq">National HQ Operator</option>
-            <option value="warehouse">Warehouse Manager</option>
-            <option value="driver">Fleet Driver</option>
-          </select>
+        <div class="field-group" style="position: relative;">
+          <label for="loginRole">Clearance Tier</label>
+          <div class="tactical-input-wrapper">
+            <select id="loginRole" class="tactical-input">
+              <option value="hq">National HQ Operator</option>
+              <option value="warehouse">Warehouse Manager</option>
+              <option value="driver">Fleet Driver</option>
+            </select>
+          </div>
         </div>
         <div class="action-row" style="margin-top: 1.5rem;">
-          <button class="btn" id="loginSubmitBtn" style="width: 100%;">Authenticate &rarr;</button>
+          <button class="tactical-btn" id="loginSubmitBtn" style="width: 100%;">
+            <span>AUTHENTICATE</span>
+            <svg class="key-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+          </button>
         </div>
         <div style="text-align: center; margin-top: 1rem;">
-          <small id="loginError" style="color: var(--risk); display: none;">Invalid credentials</small>
+          <small id="loginError" style="color: var(--status-risk); display: none;">Invalid credentials</small>
         </div>
-        <div style="margin-top: 1rem; padding: 0.8rem; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; background: rgba(255,255,255,0.03); color: var(--muted); font-size: 0.82rem; line-height: 1.5;">
-          <strong style="color: var(--text); display: block; margin-bottom: 0.3rem;">Demo Credentials</strong>
-          HQ: <span style="color: var(--text);">hqadmin / HQ@123</span><br>
-          Warehouse: <span style="color: var(--text);">warehousemgr / WH@123</span><br>
-          Driver: <span style="color: var(--text);">driver710 / DRV@123</span>
+        
+        <div class="tactical-footer">
+          <div class="demo-box border-box">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span class="demo-title">DEMO CREDENTIALS</span>
+              <svg style="width: 14px; height: 14px; color: rgba(176, 207, 173, 0.5);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+            </div>
+            <div class="demo-creds">
+              <span style="display:block;">USER: <strong style="color: var(--text-main);">hqadmin / warehousemgr / driver710</strong></span>
+              <span style="display:block;">PASS: <strong style="color: var(--text-main);">HQ@123 / WH@123 / DRV@123</strong></span>
+            </div>
+          </div>
+          <div class="meta-tags">
+            <span>IP: 192.168.1.1</span>
+            <span>TEZFLOW_OS v2.4.1</span>
+          </div>
         </div>
       </div>
+      
+      <!-- Decorative Elements -->
+      <div class="dec-corner dec-top-left"></div>
+      <div class="dec-corner dec-bottom-right"></div>
     </div>
   </div>
 

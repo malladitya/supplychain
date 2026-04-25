@@ -1243,6 +1243,8 @@ input[type="range"]:focus-visible {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
+  padding: clamp(0.75rem, 3vh, 1.5rem);
+  overflow-y: auto;
 }
 
 .modal-overlay.active {
@@ -1261,6 +1263,9 @@ input[type="range"]:focus-visible {
   transform: translateY(30px);
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
+  max-height: min(92vh, 760px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modal-overlay.active .modal-content {
@@ -1630,4 +1635,208 @@ input[type="range"]:focus-visible {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Tactical Authentication Modal (Stitch Inspired) */
+.tactical-modal {
+  background: rgba(51, 53, 52, 0.6) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(67, 72, 65, 0.15) !important;
+  border-radius: 8px !important;
+  padding: 2.5rem !important;
+  width: 90% !important;
+  max-width: 440px !important;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5) !important;
+  color: #e2e3e0;
+  max-height: min(92vh, 760px) !important;
+  overflow-y: auto !important;
+}
+
+.tactical-header h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #e2e3e0;
+  letter-spacing: -0.02em;
+  background: none;
+  -webkit-text-fill-color: #e2e3e0;
+}
+
+.tactical-header p {
+  color: #c3c8bf !important;
+  font-size: 0.85rem !important;
+  font-weight: 500;
+  margin-top: 0 !important;
+}
+
+.tactical-badge {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.65rem;
+  color: #b0cfad;
+  border: 1px solid rgba(176, 207, 173, 0.3);
+  background: rgba(176, 207, 173, 0.05);
+  padding: 0.15rem 0.4rem;
+  border-radius: 2px;
+}
+
+.tactical-form {
+  margin-top: 2.5rem !important;
+}
+
+.tactical-form .field-group label {
+  font-size: 0.65rem !important;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  color: #c3c8bf;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.35rem;
+  display: block;
+}
+
+.tactical-input-wrapper {
+  position: relative;
+}
+
+.tactical-input {
+  width: 100%;
+  background: #333534 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: #e2e3e0 !important;
+  padding: 0.75rem 1rem !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 0.05em;
+  outline: none;
+}
+
+.tactical-input::placeholder {
+  color: rgba(195, 200, 191, 0.3);
+}
+
+.input-glow-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 0;
+  background: #b0cfad;
+  transition: width 0.3s ease;
+}
+
+.tactical-input:focus ~ .input-glow-line,
+.tactical-input:active ~ .input-glow-line {
+  width: 100%;
+}
+
+.tactical-btn {
+  background: linear-gradient(135deg, #8ba888 0%, #b0cfad 100%) !important;
+  color: #1d361e !important;
+  border: none;
+  padding: 1rem !important;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: none !important;
+}
+
+.tactical-btn:hover {
+  filter: brightness(1.1);
+  transform: scale(0.98);
+}
+
+.key-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.tactical-footer {
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(67, 72, 65, 0.1);
+}
+
+.demo-box {
+  background: #1a1c1b;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.demo-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 0.6rem;
+  color: rgba(195, 200, 191, 0.6);
+  text-transform: uppercase;
+}
+
+.demo-creds {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.7rem;
+  color: rgba(195, 200, 191, 0.4);
+}
+
+.meta-tags {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.6rem;
+  color: rgba(195, 200, 191, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 640px) {
+  .modal-content,
+  .tactical-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1.25rem !important;
+    max-height: 88vh !important;
+  }
+
+  .modal-header h2,
+  .tactical-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .tactical-form {
+    margin-top: 1.3rem !important;
+  }
+
+  .tactical-footer {
+    margin-top: 1.3rem;
+    padding-top: 1rem;
+  }
+
+  .demo-creds,
+  .meta-tags {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+}
+
+.tactical-close {
+  top: 1rem !important;
+  right: 1.5rem !important;
+  color: #8d928a !important;
+}
+.tactical-close:hover {
+  color: #e2e3e0 !important;
 }
