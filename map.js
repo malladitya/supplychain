@@ -17,20 +17,21 @@ const supplyRouteLinks = [
   ["north",   "coastal"],
 ];
 
-// Driver route waypoints (fallbacks). Real routes are fetched from OSRM at runtime.
+// Driver route waypoints (fallbacks). Real routes are fetched from OSRM/ORS at runtime.
 const ROUTE_MAIN_FALLBACK = [
-  [28.6139, 77.2090],  // New Delhi   (Origin: North Hub)
-  [27.4728, 77.6942],  // Mathura
-  [27.1767, 78.0081],  // Agra        (Checkpoint)
-  [26.8467, 80.9462],  // Lucknow     (Destination: City Hospital)
+  [27.1767, 78.0081],  // Agra (origin)
+  [28.4595, 77.0266],  // Gurugram corridor
+  [30.7333, 76.7794],  // Chandigarh
+  [30.9010, 75.8573],  // Ludhiana
+  [31.6340, 74.8723],  // Amritsar (destination)
 ];
 
 const ROUTE_BYPASS_FALLBACK = [
-  [28.6139, 77.2090],  // New Delhi
-  [27.4728, 77.6942],  // Mathura
-  [25.4484, 78.5685],  // Jhansi      (bypass Agra)
-  [25.3176, 81.0000],  // Allahabad
-  [26.8467, 80.9462],  // Lucknow
+  [27.1767, 78.0081],  // Agra (origin)
+  [28.9845, 77.7064],  // Karnal corridor
+  [30.7333, 76.7794],  // Chandigarh
+  [32.2643, 75.6492],  // Pathankot safe pass
+  [31.6340, 74.8723],  // Amritsar (destination)
 ];
 
 const PUNJAB_ROUTE_MAIN = [
@@ -84,11 +85,20 @@ if (ROUTE_BYPASS_SNAPSHOT.length > 20) {
   ROUTE_BYPASS = ROUTE_BYPASS_SNAPSHOT;
 }
 
-const ORS_API_KEY =
+function _cleanOrsKey(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (raw === "PASTE_YOUR_ORS_API_KEY_HERE") return "";
+  if (raw.toLowerCase().includes("paste_your_ors")) return "";
+  return raw;
+}
+
+const ORS_API_KEY = _cleanOrsKey(
   (window.NSCNS_CONFIG && window.NSCNS_CONFIG.orsApiKey) ||
   window.NSCNS_ORS_API_KEY ||
   window.localStorage.getItem("nscns_ors_api_key") ||
-  "";
+  ""
+);
 
 const ROUTE_PROVIDERS = [
   // Preferred provider for reliable routing (requires API key).
@@ -354,16 +364,19 @@ async function loadRealRoutes() {
 
   _realRoutesPromise = (async () => {
     const mainSeed = [
-      [28.6139, 77.2090], // Delhi
       [27.1767, 78.0081], // Agra
-      [26.8467, 80.9462], // Lucknow
+      [28.4595, 77.0266], // Gurugram corridor
+      [30.7333, 76.7794], // Chandigarh
+      [30.9010, 75.8573], // Ludhiana
+      [31.6340, 74.8723], // Amritsar
     ];
 
     const bypassSeed = [
-      [28.6139, 77.2090], // Delhi
-      [25.4484, 78.5685], // Jhansi
-      [25.4358, 81.8463], // Prayagraj
-      [26.8467, 80.9462], // Lucknow
+      [27.1767, 78.0081], // Agra
+      [28.9845, 77.7064], // Karnal corridor
+      [30.7333, 76.7794], // Chandigarh
+      [32.2643, 75.6492], // Pathankot
+      [31.6340, 74.8723], // Amritsar
     ];
 
     const [mainResult, bypassResult] = await Promise.all([

@@ -119,6 +119,12 @@
       padding: 1.2rem;
       backdrop-filter: blur(var(--glass-blur));
     }
+    .wh-tab-panel {
+      display: none;
+    }
+    .wh-tab-panel.active {
+      display: block;
+    }
   </style>
   <script>
     // Apply theme immediately to prevent flashing
@@ -141,11 +147,11 @@
         <span style="opacity:0.6; font-weight:400; font-size:0.9rem; margin-left:0.5rem; color: var(--text-muted);">Node Hub</span>
       </a>
       <nav class="wh-nav">
-        <a href="#" class="active">Overview</a>
-        <a href="#">Inventory</a>
-        <a href="#">Fleet Nodes</a>
-        <a href="#">Crisis Simulation</a>
-        <a href="#">Audit Logs</a>
+        <a href="#overviewSection" data-target="overviewSection" class="active">Overview</a>
+        <a href="#inventorySection" data-target="inventorySection">Inventory</a>
+        <a href="#fleetSection" data-target="fleetSection">Fleet Nodes</a>
+        <a href="#crisisSection" data-target="crisisSection">Crisis Simulation</a>
+        <a href="#auditSection" data-target="auditSection">Audit Logs</a>
       </nav>
       <div style="position: absolute; bottom: 2rem;">
         <div style="display: flex; gap: 0.8rem; align-items: center;">
@@ -158,7 +164,7 @@
       </div>
     </aside>
 
-    <main class="wh-main reveal">
+    <main class="wh-main">
       <header class="wh-header">
         <div>
           <h1 class="hq-title">Nodes & Logistics</h1>
@@ -184,6 +190,7 @@
         <div style="font-size:0.85rem; color:var(--warn); font-weight:700;">Warehouse sync</div>
       </div>
 
+      <section id="overviewSection" class="wh-tab-panel active">
       <div class="wh-grid">
         <div class="stat-card">
           <p class="eyebrow">Medical Supply Level</p>
@@ -222,14 +229,15 @@
           <p id="warehouseHeartbeatDetail" style="color:var(--muted); font-size:0.9rem;">Awaiting global state</p>
         </div>
       </div>
+      </section>
 
       <!-- Supply Network Map -->
-      <div style="margin-bottom: 2rem;">
+      <section id="crisisSection" class="wh-tab-panel" style="margin-bottom: 2rem;">
         <h3 style="font-size:1rem; margin-bottom:0.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">Supply Network Map</h3>
         <div id="whMap" class="osm-map-container" style="height:300px;"></div>
-      </div>
+      </section>
 
-      <div class="ai-panel">
+      <section id="inventorySection" class="ai-panel wh-tab-panel">
         <h2 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
           <span class="brand-dot" style="animation: none;"></span> 
           AI Dynamic Allocation Plan
@@ -249,15 +257,23 @@
         
         <button class="btn approve-btn" id="approveTransferBtn">Approve Transfer</button>
         <span id="transferFeedback" style="margin-left: 1rem; color: var(--ok); display: none; font-weight: bold;">Transfer Approved. Fleet is executing.</span>
-      </div>
+      </section>
 
-      <div class="ai-panel" style="margin-top: 1.5rem;">
+      <section id="fleetSection" class="ai-panel wh-tab-panel" style="margin-top: 1.5rem;">
         <h2 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
           <span class="brand-dot" style="animation: none;"></span>
           Live Warehouse Signals
         </h2>
         <ul id="warehouseSignals" style="list-style:none; padding:0; margin:0; color:var(--muted); line-height:1.8;"></ul>
-      </div>
+      </section>
+
+      <section id="auditSection" class="ai-panel wh-tab-panel" style="margin-top: 1.5rem;">
+        <h2 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span class="brand-dot" style="animation: none;"></span>
+          Audit Logs
+        </h2>
+        <ul id="auditLogsList" style="list-style:none; padding:0; margin:0; color:var(--muted); line-height:1.8;"></ul>
+      </section>
     </main>
   </div>
 
@@ -266,10 +282,58 @@
   <script src="supabase.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="data/route-snapshots.js"></script>
+  <script src="config.js"></script>
   <script src="map.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      initWarehouseMap();
+      const navLinks = Array.from(document.querySelectorAll('.wh-nav a[data-target]'));
+      const auditLogsList = document.getElementById('auditLogsList');
+      const tabPanels = Array.from(document.querySelectorAll('.wh-tab-panel'));
+      let warehouseMapInitialized = false;
+
+      function ensureWarehouseMap() {
+        if (warehouseMapInitialized) {
+          window.dispatchEvent(new Event('resize'));
+          return;
+        }
+        if (typeof initWarehouseMap === 'function') {
+          initWarehouseMap();
+          warehouseMapInitialized = true;
+          window.dispatchEvent(new Event('resize'));
+        }
+      }
+
+      function setActiveNav(targetId) {
+        navLinks.forEach((link) => {
+          link.classList.toggle('active', link.dataset.target === targetId);
+        });
+      }
+
+      function showTab(targetId) {
+        tabPanels.forEach((panel) => {
+          panel.classList.toggle('active', panel.id === targetId);
+        });
+
+        if (targetId === 'crisisSection') {
+          ensureWarehouseMap();
+        }
+      }
+
+      navLinks.forEach((link) => {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          const targetId = link.dataset.target;
+          const targetEl = targetId ? document.getElementById(targetId) : null;
+          if (!targetEl) return;
+
+          setActiveNav(targetId);
+          showTab(targetId);
+        });
+      });
+
+      const initialTarget = navLinks.find((link) => link.classList.contains('active'))?.dataset.target || 'overviewSection';
+      setActiveNav(initialTarget);
+      showTab(initialTarget);
 
       const hqSyncState = document.getElementById('hqSyncState');
       const hqSyncDetail = document.getElementById('hqSyncDetail');
@@ -286,6 +350,15 @@
         warehouseSignals.prepend(item);
         while (warehouseSignals.children.length > 6) {
           warehouseSignals.removeChild(warehouseSignals.lastChild);
+        }
+
+        if (auditLogsList) {
+          const logItem = document.createElement('li');
+          logItem.innerHTML = `<strong style="color:${tone}">[${new Date().toLocaleTimeString()}]</strong> <span style="color:var(--muted)">${label}: ${detail}</span>`;
+          auditLogsList.prepend(logItem);
+          while (auditLogsList.children.length > 10) {
+            auditLogsList.removeChild(auditLogsList.lastChild);
+          }
         }
       }
 

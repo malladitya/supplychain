@@ -14,7 +14,12 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="auth-check.js"></script>
   <style>
-    body { background: var(--bg-dark); }
+    body {
+      background:
+        radial-gradient(900px 480px at 6% -12%, rgba(128, 237, 153, 0.13), transparent 65%),
+        radial-gradient(700px 420px at 100% 8%, rgba(70, 130, 180, 0.16), transparent 70%),
+        var(--bg-dark);
+    }
 
     .bg-shape-driver {
       position: fixed;
@@ -27,43 +32,61 @@
       animation: pulse-dot 5s infinite alternate;
     }
 
-    .driver-app {
-      max-width: 520px;
-      margin: 0 auto;
-      padding: 2rem;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+    .driver-cockpit {
+      width: min(960px, 94vw);
+      margin: 1.4rem auto 0;
+      padding: 1.35rem 1.35rem 2rem;
+      border-radius: 24px;
+      border: 1px solid rgba(176, 207, 173, 0.18);
+      background: linear-gradient(180deg, rgba(8, 16, 14, 0.72), rgba(8, 16, 14, 0.46));
+      backdrop-filter: blur(10px);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.4);
+      display: grid;
+      gap: 1.1rem;
     }
 
     .driver-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 2rem;
+      gap: 1rem;
+      padding: 0.35rem 0.2rem;
     }
 
-    .driver-status { text-align: center; margin-bottom: 1.5rem; }
+    .driver-status {
+      text-align: center;
+      border: 1px solid rgba(176, 207, 173, 0.18);
+      border-radius: 18px;
+      background: linear-gradient(165deg, rgba(139, 168, 136, 0.2), rgba(11, 22, 18, 0.62));
+      padding: 1rem 1rem 1.1rem;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    }
 
     .big-score {
-      font-size: 5.5rem;
+      font-size: clamp(3.1rem, 9vw, 5.5rem);
       font-family: var(--font-heading);
-      margin: 0.5rem 0;
+      margin: 0.25rem 0;
       background: linear-gradient(120deg, var(--primary), var(--ok));
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
       font-weight: 800;
+      line-height: 1;
     }
 
     .route-card {
       background: var(--glass-bg);
       backdrop-filter: blur(var(--glass-blur));
-      border: 1px solid var(--glass-border);
+      border: 1px solid rgba(176, 207, 173, 0.18);
       border-radius: var(--radius-md);
-      padding: 1.8rem;
+      padding: 1.25rem;
       box-shadow: var(--shadow-premium);
+    }
+
+    .route-card h3 {
+      margin-top: 0;
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.01em;
     }
 
     .route-timeline {
@@ -87,16 +110,30 @@
 
     .action-grid {
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 1rem;
-      margin-top: auto;
-      padding-top: 1.5rem;
+      padding-top: 0.25rem;
     }
 
     .live-status-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 1rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.15rem;
+    }
+
+    .live-status-card {
+      background: linear-gradient(165deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border: 1px solid rgba(176, 207, 173, 0.15);
+      border-radius: 14px;
+      padding: 0.95rem;
+      min-height: 132px;
+      transition: transform 0.22s ease, border-color 0.22s ease;
+    }
+
+    .live-status-card:hover {
+      border-color: rgba(176, 207, 173, 0.45);
+      transform: translateY(-2px);
     }
 
     .status-chip {
@@ -114,8 +151,42 @@
       transform: translateY(-2px);
     }
 
-    .btn-driver { font-size: 1.1rem; padding: 1.2rem; }
+    .btn-driver {
+      font-size: 1rem;
+      padding: 0.95rem 1rem;
+      min-height: 54px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
     .btn-alert  { background: linear-gradient(120deg, var(--status-risk), #c92a2a); color: #fff; }
+
+    #driverMap {
+      height: 300px;
+      border-radius: 18px;
+      overflow: hidden;
+      margin-bottom: 0.4rem;
+      border: 1px solid rgba(176, 207, 173, 0.15);
+      background: #0d1f2d;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+
+    #driverSignals {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    #driverSignals li {
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+      padding: 0.42rem 0;
+    }
+
+    #driverSignals li:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
 
     #rerouteAlert {
       display: none;
@@ -179,6 +250,40 @@
       display: block;
       opacity: 1;
     }
+
+    @media (max-width: 900px) {
+      .driver-cockpit {
+        width: min(100%, 96vw);
+        border-radius: 18px;
+      }
+
+      .live-status-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .action-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .driver-cockpit {
+        margin-top: 0.8rem;
+        padding: 0.9rem 0.8rem 1.2rem;
+      }
+
+      .driver-header {
+        align-items: flex-start;
+      }
+
+      .driver-header > a {
+        gap: 0.6rem !important;
+      }
+
+      #driverMap {
+        height: 240px;
+      }
+    }
   </style>
   <script>
     // Apply theme immediately to prevent flashing
@@ -196,7 +301,7 @@
 <body class="has-dashboard-footer">
   <div class="bg-shape-driver"></div>
 
-  <main class="driver-cockpit reveal">
+  <main class="driver-cockpit">
     <header class="driver-header">
       <a href="index.html" style="display: flex; align-items: center; gap: 1rem; text-decoration: none; color: inherit;">
         <img src="Logo2.png.png" class="brand-logo" alt="TezFlow">
@@ -260,11 +365,11 @@
     </div>
 
     <!-- Live Route Map -->
-    <div id="driverMap" style="height:260px; border-radius:16px; overflow:hidden; margin-bottom:1.5rem; background:#0d1f2d;"></div>
+    <div id="driverMap"></div>
 
     <div class="route-card">
-      <h3 style="margin-bottom: 0.75rem;">Live Driver Signals</h3>
-      <ul id="driverSignals" style="list-style:none; padding:0; margin:0; color:var(--muted); line-height:1.8;"></ul>
+      <h3>Live Driver Signals</h3>
+      <ul id="driverSignals"></ul>
     </div>
 
     <div class="route-card" id="routeCard">
@@ -289,7 +394,7 @@
       <button class="btn btn-driver" id="confirmDeliveryBtn">Confirm Delivery</button>
       <button class="btn btn-driver btn-alert" id="reportCongestionBtn">Report Local Congestion</button>
     </div>
-  </div>
+  </main>
 
   <!-- Toast notification -->
   <div id="driverMapNotification"></div>
@@ -300,6 +405,7 @@
   <script src="supabase.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="data/route-snapshots.js"></script>
+  <script src="config.js"></script>
   <script src="map.js"></script>
 
   <script>
